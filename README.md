@@ -1,92 +1,101 @@
-# spec-superflow
+<h1 align="center">spec-superflow</h1>
 
-`spec-superflow` is a self-contained workflow integration plugin for Claude Code and Trae.
+<p align="center">
+  <strong>连通"需求说清楚"和"代码写对路"的 AI 编程工作流插件</strong>
+</p>
 
-It combines:
+<p align="center">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT License"></a>
+  <a href="INSTALL.md"><img src="https://img.shields.io/badge/Claude%20Code%20%7C%20Trae-supported-green.svg" alt="Claude Code | Trae"></a>
+  <a href="https://github.com/MageByte-Zero/spec-superflow/stargazers"><img src="https://img.shields.io/github/stars/MageByte-Zero/spec-superflow" alt="GitHub Stars"></a>
+</p>
 
-- OpenSpec-style artifact thinking: `proposal.md`, `specs/`, `design.md`, `tasks.md`
-- Superpowers-style execution discipline: guardrails, TDD, review gates, controlled handoff
+<p align="center">
+  <a href="#为什么需要它">为什么需要它</a> |
+  <a href="docs/README_en.md">English</a> |
+  <a href="#核心-skills">Skills</a> |
+  <a href="#快速开始">快速开始</a> |
+  <a href="#工作流">工作流</a> |
+  <a href="#常见问题">FAQ</a>
+</p>
 
-The key idea is simple:
+---
 
-```text
-clarify -> specify -> bridge -> execute -> close
+## 为什么需要它
+
+用 AI 写代码时，最常碰到两个失控点：
+
+- **还没想清楚要做什么，AI 就开始写代码。** 你说了句"帮我加个权限控制"，它就开始改几十个文件。改到一半才发现 —— 到底要 RBAC 还是 ABAC？
+
+- **规划文档写得明明白白，但执行阶段还是会跑偏。** proposal 写了、design 画了，但实现过程中没人盯着测试、没人卡 review，等到合并才发现行为不对。
+
+**spec-superflow 在两个失控点之间加了一道硬桥：**
+
+`spec-explorer` 先把需求问清楚 -> `spec-forger` 把意图沉淀为正式工件 -> `bridge-contract` 把规划压缩成执行契约 `execution-contract.md` -> `execution-governor` 只按已批准的契约推进实现。
+
+它不是把 OpenSpec 和 Superpowers 并排安装再手工拼接，而是把两者最有价值的部分吸收进一个统一的 workflow owner。
+
+| 设计原则 | 说明 |
+|---|---|
+| Spec First | 没有稳定的规划工件，不允许进入实现 |
+| Guarded Handoff | `execution-contract.md` 是规划到实现的唯一交接层 |
+| Strong Guardrails | 实现过程中违反契约的行为被明确拦截并回退 |
+| Self-Contained | 不需要运行时安装 OpenSpec 或 Superpowers |
+
+## 核心 Skills
+
+| Skill | 阶段 | 职责 |
+|---|---|---|
+| `workflow-orchestrator` | 入口 | 检查状态、路由到正确的 skill、阻止非法跳转 |
+| `spec-explorer` | 探索 | 澄清意图、范围、约束、成功标准 |
+| `spec-forger` | 规格 | 生成 proposal、specs、design、tasks |
+| `bridge-contract` | 桥接 | 把规划工件压缩为 `execution-contract.md` |
+| `execution-governor` | 执行 | 强制 TDD、评审关卡、契约优先实现 |
+| `closure-archivist` | 收口 | 验证、总结、归档准备 |
+
+## 快速开始
+
+### 安装
+
+支持 Claude Code 和 Trae 本地 skills 安装。完整说明见 [INSTALL.md](INSTALL.md)。
+
+**Claude Code：**
+
+```bash
+mkdir -p ~/.claude/skills
+cp -R skills/workflow-orchestrator ~/.claude/skills/
+cp -R skills/spec-explorer ~/.claude/skills/
+cp -R skills/spec-forger ~/.claude/skills/
+cp -R skills/bridge-contract ~/.claude/skills/
+cp -R skills/execution-governor ~/.claude/skills/
+cp -R skills/closure-archivist ~/.claude/skills/
 ```
 
-Instead of requiring users to install both upstream systems and manually stitch them together, `spec-superflow` absorbs the useful parts of each and exposes one coherent workflow.
+**Trae：**
 
-## Language
+```bash
+mkdir -p ~/.trae/skills
+cp -R skills/workflow-orchestrator ~/.trae/skills/
+cp -R skills/spec-explorer ~/.trae/skills/
+cp -R skills/spec-forger ~/.trae/skills/
+cp -R skills/bridge-contract ~/.trae/skills/
+cp -R skills/execution-governor ~/.trae/skills/
+cp -R skills/closure-archivist ~/.trae/skills/
+```
 
-- English: `README.md`
-- Chinese: [README.zh-CN.md](file:///Users/magebte/Documents/magebyte/open-source-plugins/spec-superflow/README.zh-CN.md)
+### 使用
 
-## Why It Exists
+安装完成后，告诉 Agent：
 
-Most AI coding sessions fail in one of two ways:
+- 启动新的  change -> "用 workflow-orchestrator"
+- 恢复旧的 change -> "继续上次的工作流"
+- 不确定当前状态 -> "帮我看看现在该干什么"
 
-1. The AI starts writing code before "what we are building" is stable.
-2. The team does define the change, but implementation still drifts because testing, review, and handoff are too loose.
+Agent 会自动检查当前工件，判断处于探索/规格/桥接/执行/收口的哪个阶段。
 
-`spec-superflow` addresses both:
+## 工作流
 
-- `spec-explorer` and `spec-forger` make the change explicit.
-- `bridge-contract` turns planning artifacts into an `execution-contract.md`.
-- `execution-governor` treats that contract as the approved source for implementation behavior.
-
-## Core Skills
-
-- `workflow-orchestrator`
-- `spec-explorer`
-- `spec-forger`
-- `bridge-contract`
-- `execution-governor`
-- `closure-archivist`
-
-## First Release Scope
-
-- Self-contained plugin, not a dual-install runtime wrapper
-- Spec-first workflow with a guarded bridge into execution
-- First release targets Claude Code and Trae style local skill loading
-- `execution-contract.md` is the formal handoff layer between planning and implementation
-
-## Installation Philosophy
-
-This plugin is designed to be self-contained.
-
-- It does **not** require runtime installation of OpenSpec.
-- It does **not** require runtime installation of Superpowers.
-- It may borrow their ideas, structures, and proven workflow patterns.
-- It keeps runtime control inside one plugin so there is one workflow owner.
-
-## Install
-
-- Full guide: [INSTALL.md](file:///Users/magebte/Documents/magebyte/open-source-plugins/spec-superflow/INSTALL.md)
-- Claude Code: install the six skill directories into `~/.claude/skills`
-- Trae: install the six skill directories into `~/.trae/skills`
-- Important runtime pieces:
-  - `.claude-plugin/plugin.json`
-  - `skills/`
-
-## Quick Start
-
-1. Install the six skills into your local skill path.
-2. Create or choose a change workspace under `workflow/changes/<change-name>/`.
-3. Start from `workflow-orchestrator`.
-4. Let the workflow move through exploration, specification, bridging, execution, and closure.
-
-## How To Use
-
-### 1. Start from the orchestrator
-
-Ask the agent to use `workflow-orchestrator` when:
-
-- starting a new change
-- resuming an old change
-- deciding what stage the work is in
-
-### 2. Let the workflow move through five artifact steps
-
-For a change named `<change-name>`, the plugin expects:
+对于名为 `<change-name>` 的变更，推荐的工件目录：
 
 ```text
 workflow/
@@ -99,64 +108,75 @@ workflow/
     └── execution-contract.md
 ```
 
-### 3. Use one workflow owner
-
-Do not ask the same session to separately run:
-
-- OpenSpec workflow commands
-- Superpowers workflow entry points
-- `spec-superflow` orchestration
-
-Pick `spec-superflow` as the visible workflow owner and let it absorb the rest.
-
-### 4. Let the contract gate execution
-
-Planning alone does not authorize implementation.
-
-The intended handoff is:
+流程线是：
 
 ```text
-proposal/specs/design/tasks -> execution-contract.md -> approved build work
+proposal/specs/design/tasks -> execution-contract.md -> 用户批准 -> 开始实现
 ```
 
-If the contract is missing, stale, or unapproved, route back instead of coding forward.
+**规划本身不等于可以实现。** 如果 `execution-contract.md` 缺失、过时或未被用户批准，工作流会拒绝进入实现阶段。
 
-## Included Templates
+## 示例
 
-Templates live in `templates/`:
+两个完整 change 示例展示了从 proposal 到 execution contract 的贯通路径：
 
-- `proposal.md`
-- `spec.md`
-- `design.md`
-- `tasks.md`
-- `execution-contract.md`
+- `docs/examples/add-dark-mode/` -- 新 UI 功能（暗色模式）
+- `docs/examples/refactor-auth-boundary/` -- brownfield 后端重构（认证边界）
 
-## Docs
+阅读顺序：`proposal.md` -> `specs/` -> `design.md` -> `tasks.md` -> `execution-contract.md`
 
-- [Artifact Contract](file:///Users/magebte/Documents/magebyte/open-source-plugins/spec-superflow/docs/artifact-contract.md)
-- [State Machine](file:///Users/magebte/Documents/magebyte/open-source-plugins/spec-superflow/docs/state-machine.md)
-- [Examples](file:///Users/magebte/Documents/magebyte/open-source-plugins/spec-superflow/docs/examples/README.md)
-- [Install Guide](file:///Users/magebte/Documents/magebyte/open-source-plugins/spec-superflow/INSTALL.md)
-- [Changelog](file:///Users/magebte/Documents/magebyte/open-source-plugins/spec-superflow/CHANGELOG.md)
-- [Contributing](file:///Users/magebte/Documents/magebyte/open-source-plugins/spec-superflow/CONTRIBUTING.md)
-- [Release Checklist](file:///Users/magebte/Documents/magebyte/open-source-plugins/spec-superflow/docs/release-checklist.md)
+## 常用问题
 
-## Example Workflow
+<details>
+<summary><strong>spec-superflow 和 OpenSpec / Superpowers 什么关系？</strong></summary>
 
-Two complete change sets demonstrate the full progression from proposal to execution contract:
+OpenSpec 侧重规划工件（proposal、specs、design、tasks）。Superpowers 侧重执行纪律（TDD、review gate、subagent 驱动开发）。spec-superflow 把两者合并为一个工作流：先规划，通过桥接层压缩为执行契约，再在约束下实现。
 
-- `docs/examples/add-dark-mode/` — net-new UI capability (dark mode)
-- `docs/examples/refactor-auth-boundary/` — brownfield backend refactor (auth layer)
+你不需要运行时安装 OpenSpec 或 Superpowers。
+</details>
 
-Read each in artifact order: `proposal.md` → `specs/` → `design.md` → `tasks.md` → `execution-contract.md`.
+<details>
+<summary><strong>能用在我已有的 OpenSpec change 目录上吗？</strong></summary>
 
-## Current Status
+可以部分兼容。如果你的目录已经有 proposal、specs、design、tasks，可以直接用 bridge-contract 生成 execution contract。但不要在同一会话混用 OpenSpec CLI 命令和 spec-superflow skills——选一个做 workflow owner。
+</details>
 
-This repository currently contains a usable `v0.1` plugin scaffold:
+<details>
+<summary><strong>支持 brownfield / 已有代码库吗？</strong></summary>
 
-- plugin metadata
-- skill boundaries
-- full planning and execution-contract templates
-- supporting docs for artifact mapping and state transitions
-- one complete example change set
-- install guide, license, and changelog
+支持。工作流不假设你是从零开始的项目。spec-explorer 会先检查项目上下文再提问。见 `refactor-auth-boundary` 示例。
+</details>
+
+<details>
+<summary><strong>第一版支持哪些平台？</strong></summary>
+
+Claude Code 和 Trae。两者都通过本地 skills 目录加载，不需要额外运行时依赖。
+</details>
+
+<details>
+<summary><strong>execution contract 怎么知道该更新了？</strong></summary>
+
+以下情况视为 contract 过时：
+
+- proposal.md 范围变了
+- specs/ 里的已批准需求改了
+- design.md 架构或接口约束变了
+- tasks.md 执行批次变了
+
+过时后 workflow-orchestrator 会回退到 bridge-contract，不会继续执行。
+</details>
+
+## 当前状态
+
+当前仓库 v0.1 已可用：
+
+- 插件元数据已就位
+- 六个核心 skills 已具备明确职责和路由规则
+- 五类模板完整（proposal、spec、design、tasks、execution-contract）
+- 工件映射与状态机文档齐全
+- 两个完整示例（UI 功能 + 后端重构）
+- 安装指南、许可证、版本记录已补齐
+
+---
+
+**Star 一下，下次需要的时候能找到。**
