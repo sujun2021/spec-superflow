@@ -1,0 +1,57 @@
+# Release Checklist
+
+Use this checklist before publishing a new version of `spec-superflow`.
+
+## Repository Shape
+
+- `README.md` is current
+- `README.zh-CN.md` is current
+- `INSTALL.md` matches the supported installation story
+- `CHANGELOG.md` contains the new release entry
+- `LICENSE` is present
+- `.claude-plugin/plugin.json` has the intended version
+
+## Workflow Integrity
+
+- skill descriptions still match their actual responsibilities
+- `workflow-orchestrator` still acts as the primary entry point
+- `bridge-contract` still requires explicit approval before execution
+- planning artifacts and execution contract roles remain distinct
+- self-contained ownership is preserved
+
+## Templates And Docs
+
+- templates reflect the current workflow expectations
+- `docs/artifact-contract.md` matches the templates and skills
+- `docs/state-machine.md` matches the actual workflow routing model
+- examples still demonstrate the documented workflow
+
+## Example Quality
+
+For each example in `docs/examples/`:
+
+- `README.md` explains the scenario
+- `proposal.md` defines intent and scope
+- `specs/` define testable behavior
+- `design.md` defines technical shape and constraints
+- `tasks.md` defines execution order
+- `execution-contract.md` defines approved build rules
+
+## Publishing Checks
+
+- there are no stray `TODO` or `TBD` markers
+- links and referenced paths are still valid
+- no local-only junk files are included
+- `.gitignore` still excludes editor and OS artifacts
+
+## Recommended Final Pass
+
+Do one last read of:
+
+- `README.md`
+- `README.zh-CN.md`
+- `INSTALL.md`
+- `skills/workflow-orchestrator/SKILL.md`
+- `skills/bridge-contract/SKILL.md`
+
+If those five files feel coherent together, the release is usually in good shape.
