@@ -46,6 +46,36 @@
 | Execute Disciplined | TDD 铁律 + SDD 子代理驱动 + Review Gate 双重审查 |
 | Self-Contained | 不需要运行时安装 OpenSpec 或 Superpowers，一个插件全包 |
 
+## 适用场景
+
+### ✅ 推荐使用
+
+| 场景 | 原因 |
+|------|------|
+| **大型功能开发** | 需要明确的规划、审查、测试门禁，防止实现偏离设计 |
+| **多人协作项目** | `execution-contract.md` 提供明确的协作合约和审查标准 |
+| **长期维护项目** | `spec-syncer` 防止规范腐烂，delta spec 机制支持持续演进 |
+| **需要 TDD + Review Gate** | 内置 TDD 铁律 + SDD 子代理驱动 + 双重审查 |
+| **棕地项目（brownfield）** | spec-explorer 先检查现有代码，再规划变更 |
+| **需要规划稳定性检查** | bridge-contract 确保规划稳定后才进入实现 |
+
+### ❌ 不推荐使用
+
+| 场景 | 原因 | 建议 |
+|------|------|------|
+| **快速原型 / Demo** | 工作流太重，token 消耗大 | 直接用 Claude Code 默认行为 |
+| **小改动（< 100 行）** | 9 个 skill + 7 状态过度设计 | 直接改代码 + 测试 |
+| **探索性开发** | 规划会频繁变化，合约会反复失效 | 用 `spec-explorer` 单 skill，不走完整流程 |
+| **个人实验项目** | 审查门禁和归档流程是负担 | 用 Superpowers 或 OpenSpec 单一框架 |
+| **纯 Bug 修复** | 不需要规划阶段 | 用 `systematic-debugger` 单 skill |
+| **学习/实验新工具** | 工作流会限制探索自由度 | 直接动手实验 |
+
+### 💡 经验法则
+
+> **如果一个改动你不需要写 proposal 和 design doc 就能想清楚，那 spec-superflow 可能太重了。**
+>
+> 简单判断：如果你会在团队周会上花 5 分钟以上解释这个改动，那 spec-superflow 是值得的。
+
 ## 推荐使用方式
 
 ### 入口永远从这里开始

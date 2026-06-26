@@ -28,6 +28,36 @@ Most AI coding sessions fail in one of two ways:
 - `bridge-contract` turns planning artifacts into an `execution-contract.md`.
 - `execution-governor` treats that contract as the approved source for implementation behavior.
 
+## When to Use
+
+### ✅ Good Fit
+
+| Scenario | Why |
+|----------|-----|
+| **Large feature development** | Needs explicit planning, review gates, and test discipline to prevent drift |
+| **Multi-person collaboration** | `execution-contract.md` provides clear contracts and review standards |
+| **Long-term maintenance** | `spec-syncer` prevents spec rot; delta specs support continuous evolution |
+| **TDD + Review Gate required** | Built-in TDD Iron Law + SDD subagent-driven + dual review |
+| **Brownfield projects** | `spec-explorer` inspects existing code before planning changes |
+| **Need for planning stability** | `bridge-contract` ensures planning is stable before implementation begins |
+
+### ❌ Not a Good Fit
+
+| Scenario | Why | Alternative |
+|----------|-----|-------------|
+| **Quick prototype / Demo** | Workflow is heavy, high token cost | Use Claude Code default behavior |
+| **Small changes (< 100 lines)** | 9 skills + 7 states is overkill | Just edit code + test |
+| **Exploratory development** | Planning changes frequently, contract goes stale fast | Use `spec-explorer` alone, skip full workflow |
+| **Personal experimental project** | Review gates and archiving add burden | Use Superpowers or OpenSpec alone |
+| **Pure bug fix** | No planning phase needed | Use `systematic-debugger` alone |
+| **Learning / experimenting with new tools** | Workflow restricts exploration freedom | Just experiment directly |
+
+### 💡 Rule of Thumb
+
+> **If you can figure out a change without writing a proposal and design doc, spec-superflow is probably too heavy for it.**
+>
+> Quick test: If you'd spend more than 5 minutes explaining the change in a team standup, spec-superflow is worth it.
+
 ## Recommended Usage
 
 ### The Single Entry Point
