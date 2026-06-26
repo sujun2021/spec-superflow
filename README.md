@@ -58,39 +58,32 @@
 
 ### 安装
 
-支持 Claude Code 和 Trae 本地 skills 安装。完整说明见 [INSTALL.md](INSTALL.md)。
+**Claude Code（推荐）：**
 
-**Claude Code：**
-
-```bash
-mkdir -p ~/.claude/skills
-cp -R skills/workflow-orchestrator ~/.claude/skills/
-cp -R skills/spec-explorer ~/.claude/skills/
-cp -R skills/spec-forger ~/.claude/skills/
-cp -R skills/bridge-contract ~/.claude/skills/
-cp -R skills/execution-governor ~/.claude/skills/
-cp -R skills/closure-archivist ~/.claude/skills/
 ```
+/plugin marketplace add MageByte-Zero/spec-superflow
+/plugin install spec-superflow@spec-superflow
+```
+
+两行命令搞定。零拷贝、零配置。
 
 **Trae：**
 
 ```bash
+git clone https://github.com/MageByte-Zero/spec-superflow.git
 mkdir -p ~/.trae/skills
-cp -R skills/workflow-orchestrator ~/.trae/skills/
-cp -R skills/spec-explorer ~/.trae/skills/
-cp -R skills/spec-forger ~/.trae/skills/
-cp -R skills/bridge-contract ~/.trae/skills/
-cp -R skills/execution-governor ~/.trae/skills/
-cp -R skills/closure-archivist ~/.trae/skills/
+cp -R spec-superflow/skills/* ~/.trae/skills/
 ```
+
+更多安装方式见 [INSTALL.md](INSTALL.md)。
 
 ### 使用
 
 安装完成后，告诉 Agent：
 
-- 启动新的  change -> "用 workflow-orchestrator"
-- 恢复旧的 change -> "继续上次的工作流"
-- 不确定当前状态 -> "帮我看看现在该干什么"
+- 启动新的变更 → "用 workflow-orchestrator 开始"
+- 恢复旧的变更 → "继续上次的工作流"
+- 不确定当前状态 → "帮我看看现在该干什么"
 
 Agent 会自动检查当前工件，判断处于探索/规格/桥接/执行/收口的哪个阶段。
 

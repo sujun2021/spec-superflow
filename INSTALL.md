@@ -1,115 +1,53 @@
 # Install
 
-`spec-superflow` is a self-contained plugin.
-
-You do not need to install OpenSpec or Superpowers at runtime.
-
-What you install is:
-
-- the plugin metadata in `.claude-plugin/plugin.json`
-- the six skill directories in `skills/`
-
-## Supported First Release Targets
-
-This repository currently targets:
-
-- Claude Code style local skill loading
-- Trae style local skill loading
+`spec-superflow` is a self-contained plugin. You do not need to install OpenSpec or Superpowers at runtime.
 
 ## Claude Code
 
-### Option A: symlink individual skills
+### 一键安装（推荐）
 
-Create the Claude skills directory if it does not exist:
+在 Claude Code 中直接注册 marketplace 并安装：
 
-```bash
-mkdir -p ~/.claude/skills
+```
+/plugin marketplace add MageByte-Zero/spec-superflow
+/plugin install spec-superflow@spec-superflow
 ```
 
-Symlink each skill from this repository:
+### 或者：本地安装
 
 ```bash
-ln -s /absolute/path/to/spec-superflow/skills/workflow-orchestrator ~/.claude/skills/workflow-orchestrator
-ln -s /absolute/path/to/spec-superflow/skills/spec-explorer ~/.claude/skills/spec-explorer
-ln -s /absolute/path/to/spec-superflow/skills/spec-forger ~/.claude/skills/spec-forger
-ln -s /absolute/path/to/spec-superflow/skills/bridge-contract ~/.claude/skills/bridge-contract
-ln -s /absolute/path/to/spec-superflow/skills/execution-governor ~/.claude/skills/execution-governor
-ln -s /absolute/path/to/spec-superflow/skills/closure-archivist ~/.claude/skills/closure-archivist
+git clone https://github.com/MageByte-Zero/spec-superflow.git
 ```
 
-### Option B: copy the skills
+Claude Code 会自动发现 `.claude-plugin/` 目录下的插件，无需手动拷贝。
 
-If you do not want symlinks, copy the directories instead:
+如果未自动发现，在 Claude Code 中执行：
 
-```bash
-mkdir -p ~/.claude/skills
-cp -R /absolute/path/to/spec-superflow/skills/workflow-orchestrator ~/.claude/skills/
-cp -R /absolute/path/to/spec-superflow/skills/spec-explorer ~/.claude/skills/
-cp -R /absolute/path/to/spec-superflow/skills/spec-forger ~/.claude/skills/
-cp -R /absolute/path/to/spec-superflow/skills/bridge-contract ~/.claude/skills/
-cp -R /absolute/path/to/spec-superflow/skills/execution-governor ~/.claude/skills/
-cp -R /absolute/path/to/spec-superflow/skills/closure-archivist ~/.claude/skills/
 ```
-
-### Claude Code usage pattern
-
-Once installed, start from:
-
-- `workflow-orchestrator` when beginning or resuming a change
-
-Then let the workflow route forward:
-
-- `spec-explorer`
-- `spec-forger`
-- `bridge-contract`
-- `execution-governor`
-- `closure-archivist`
-
-Do not mix this with separate OpenSpec commands or separate Superpowers entry points in the same session.
+/plugin install file:/absolute/path/to/spec-superflow
+```
 
 ## Trae
 
-### Option A: symlink individual skills
-
-Create the Trae skills directory if it does not exist:
-
 ```bash
+git clone https://github.com/MageByte-Zero/spec-superflow.git
 mkdir -p ~/.trae/skills
+cp -R spec-superflow/skills/* ~/.trae/skills/
 ```
 
-Symlink each skill:
+## 使用
 
-```bash
-ln -s /absolute/path/to/spec-superflow/skills/workflow-orchestrator ~/.trae/skills/workflow-orchestrator
-ln -s /absolute/path/to/spec-superflow/skills/spec-explorer ~/.trae/skills/spec-explorer
-ln -s /absolute/path/to/spec-superflow/skills/spec-forger ~/.trae/skills/spec-forger
-ln -s /absolute/path/to/spec-superflow/skills/bridge-contract ~/.trae/skills/bridge-contract
-ln -s /absolute/path/to/spec-superflow/skills/execution-governor ~/.trae/skills/execution-governor
-ln -s /absolute/path/to/spec-superflow/skills/closure-archivist ~/.trae/skills/closure-archivist
-```
+安装完成后，告诉 Agent：
 
-### Option B: copy the skills
+- 启动新的变更 → "用 workflow-orchestrator 开始"
+- 恢复旧的变更 → "继续上次的工作流"
+- 不确定当前状态 → "帮我看看现在该干什么"
 
-```bash
-mkdir -p ~/.trae/skills
-cp -R /absolute/path/to/spec-superflow/skills/workflow-orchestrator ~/.trae/skills/
-cp -R /absolute/path/to/spec-superflow/skills/spec-explorer ~/.trae/skills/
-cp -R /absolute/path/to/spec-superflow/skills/spec-forger ~/.trae/skills/
-cp -R /absolute/path/to/spec-superflow/skills/bridge-contract ~/.trae/skills/
-cp -R /absolute/path/to/spec-superflow/skills/execution-governor ~/.trae/skills/
-cp -R /absolute/path/to/spec-superflow/skills/closure-archivist ~/.trae/skills/
-```
+Agent 会自动检查当前工件，判断处于探索 / 规格 / 桥接 / 执行 / 收口的哪个阶段。
 
-### Trae usage pattern
+## 工作流目录约定
 
-Use the same workflow entry:
-
-- invoke `workflow-orchestrator` first
-- let it determine whether the change is exploring, specifying, bridging, executing, or closing
-
-## Recommended Workspace Layout
-
-For a change named `<change-name>`, the repository assumes:
+对于名为 `<change-name>` 的变更：
 
 ```text
 workflow/
@@ -122,30 +60,27 @@ workflow/
     └── execution-contract.md
 ```
 
-## Quick Validation
+流程线：`proposal/specs/design/tasks -> execution-contract.md -> 用户批准 -> 开始实现`
 
-After installation, verify that:
+规划本身不等于可以实现。如果 `execution-contract.md` 缺失、过时或未被用户批准，工作流会拒绝进入实现阶段。
 
-- the six skill directories are visible to your tool
-- each `SKILL.md` is readable
-- you can explicitly ask for `workflow-orchestrator`
+## 验证
 
-## Troubleshooting
+安装后验证：
 
-### The agent cannot find the skill
+- `workflow-orchestrator` skill 已可用
+- 其余 5 个 skill 全部可见
+- 能明确请求 `workflow-orchestrator`
 
-Check:
+## 故障排查
 
-- the directory name matches the skill name
-- the directory contains `SKILL.md`
-- your local skill search path is the one you installed into
+### Agent 找不到 skill
 
-### The workflow starts implementing too early
+- 检查 skill 目录名是否与 skill 名一致
+- 检查目录下是否存在 `SKILL.md`
 
-Start from `workflow-orchestrator`, not `execution-governor`.
+### 工作流过早开始实现
 
-The intended progression is:
+从 `workflow-orchestrator` 入口开始，不要直接调用 `execution-governor`。
 
-```text
-exploring -> specifying -> bridging -> approved-for-build -> executing -> closing
-```
+推荐流程：`exploring -> specifying -> bridging -> approved-for-build -> executing -> closing`

@@ -1,7 +1,8 @@
 {
   "name": "spec-superflow",
   "version": "0.1.0",
-  "description": "Spec-first workflow integration plugin that turns clarified requirements into an execution contract, then enforces disciplined implementation.",
+  "description": "Spec-first workflow plugin: clarified requirements → execution contract → disciplined implementation",
+  "source": "./",
   "author": {
     "name": "MageByte",
     "url": "https://github.com/MageByte-Zero"
@@ -14,6 +15,7 @@
     "skills",
     "spec-driven-development",
     "tdd",
+    "contract-driven",
     "claude-code",
     "trae"
   ],

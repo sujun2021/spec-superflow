@@ -1,0 +1,20 @@
+{
+  "name": "spec-superflow",
+  "description": "Spec-first workflow plugin: clarified requirements → execution contract → disciplined implementation",
+  "owner": {
+    "name": "MageByte",
+    "url": "https://github.com/MageByte-Zero"
+  },
+  "plugins": [
+    {
+      "name": "spec-superflow",
+      "description": "6-state workflow engine with 6 collaborative skills. Bridges planning and execution via execution-contract.md.",
+      "version": "0.1.0",
+      "source": "./",
+      "author": {
+        "name": "MageByte",
+        "url": "https://github.com/MageByte-Zero"
+      }
+    }
+  ]
+}

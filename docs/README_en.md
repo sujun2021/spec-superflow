@@ -57,14 +57,28 @@ This plugin is designed to be self-contained.
 
 ## Install
 
-- Full guide: [INSTALL.md](file:///Users/magebte/Documents/magebyte/open-source-plugins/spec-superflow/INSTALL.md)
-- Claude Code: install the six skill directories into `~/.claude/skills`
-- Trae: install the six skill directories into `~/.trae/skills`
-- Important runtime pieces: `.claude-plugin/plugin.json` and `skills/`
+**Claude Code (recommended):**
+
+```
+/plugin marketplace add MageByte-Zero/spec-superflow
+/plugin install spec-superflow@spec-superflow
+```
+
+That's it. Zero copy, zero config.
+
+**Trae:**
+
+```bash
+git clone https://github.com/MageByte-Zero/spec-superflow.git
+mkdir -p ~/.trae/skills
+cp -R spec-superflow/skills/* ~/.trae/skills/
+```
+
+Full guide: [INSTALL.md](file:///Users/magebte/Documents/magebyte/open-source-plugins/spec-superflow/INSTALL.md)
 
 ## Quick Start
 
-1. Install the six skills into your local skill path.
+1. Install the plugin (see above).
 2. Create or choose a change workspace under `workflow/changes/<change-name>/`.
 3. Start from `workflow-orchestrator`.
 4. Let the workflow move through exploration, specification, bridging, execution, and closure.
