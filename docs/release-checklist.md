@@ -10,6 +10,7 @@ Use this checklist before publishing a new version of `spec-superflow`.
 - `CHANGELOG.md` contains the new release entry
 - `LICENSE` is present
 - `.claude-plugin/plugin.json` has the intended version
+- `.claude-plugin/marketplace.json` version matches `plugin.json`
 
 ## Workflow Integrity
 

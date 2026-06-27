@@ -132,7 +132,7 @@ Test data lives in `docs/examples/` — real proposal/spec/design artifacts from
 ## Release Checklist
 
 Refer to `docs/release-checklist.md` before publishing. Key items:
-- Keep `README.md` / `README.zh-CN.md` / `INSTALL.md` / `CHANGELOG.md` / `.claude-plugin/plugin.json` version in sync
+- Keep `README.md` / `README.zh-CN.md` / `INSTALL.md` / `CHANGELOG.md` / `.claude-plugin/plugin.json` / `.claude-plugin/marketplace.json` version in sync
 - Verify all examples are complete (proposal + specs + design + tasks + execution-contract + README)
 - No stray `TODO` or `TBD` markers
 - `package.json` version matches `.claude-plugin/plugin.json` version
