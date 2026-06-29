@@ -24,3 +24,8 @@
 ## v0.6.0-fast-and-aware
 
 - Batch 1: complete — Task 1.1 (docs/decision-points.md), Task 1.2 (state-loader 14 DP fields), Task 1.3 (cmd-state set subcommand), guard schema-valid fix. Commit a053900.
+- Batch 2: complete — Task 2.1-2.4 (guard.mjs --workflow, applyWorkflowMode, 2 new transitions). Commit 264cdee.
+- Batch 3: complete — Task 3.1-3.5 (cmd-inject.mjs, PHASE_TEMPLATES, .claude/always/ install). Commit 264cdee.
+- Batch 4: complete — Task 4.1-4.6 (4 skill files updated with fast-path + DP refs). Commit 96616e6.
+- Batch 5: complete — Task 5.1-5.5 (version 0.6.0, CHANGELOG, README). Commit 3fb0147.
+- **v0.6.0 IMPLEMENTED** — 5 batches, 3 commits, 20/20 tests pass, ssf doctor all green.
