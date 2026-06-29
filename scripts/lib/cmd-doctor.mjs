@@ -116,8 +116,8 @@ function checkDocs(root) {
         try { return statSync(join(skillsDir, f)).isDirectory(); } catch { return false; }
       }).length;
       const readme = readFileSync(readmePath, 'utf-8');
-      // Count table rows with skill references (heuristic: rows with `skill-name` pattern)
-      const skillRefs = readme.match(/\| `[a-z-]+`/g) || [];
+      // Count skill table rows (pattern: | N | `skill-name` | where N is a row number)
+      const skillRefs = readme.match(/\|\s*\d+\s*\|\s*`[a-z-]+`/g) || [];
       if (skillRefs.length > 0 && skillRefs.length !== actualSkills) {
         warnings.push(`README lists ${skillRefs.length} skills, but skills/ has ${actualSkills}`);
       }
