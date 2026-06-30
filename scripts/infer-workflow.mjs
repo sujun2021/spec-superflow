@@ -1,0 +1,113 @@
+#!/usr/bin/env node
+// scripts/infer-workflow.mjs — infer hotfix/tweak/full from change artifacts
+import { existsSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { readState } from './lib/state-loader.mjs';
+
+const CODE_EXTS = new Set([
+  'mjs', 'js', 'ts', 'jsx', 'tsx', 'cjs',
+]);
+const CONFIG_DOC_EXTS = new Set([
+  'md', 'json', 'yaml', 'yml', 'toml', 'ini',
+  'txt', 'html', 'css',
+]);
+
+const FILE_RE = /\b\/?(?:[\w-]+\/)*[\w-]+\.(mjs|js|ts|jsx|tsx|cjs|md|json|yaml|yml|toml|ini|txt|html|css)\b/gi;
+
+function readText(dir, name) {
+  const p = join(dir, name);
+  return existsSync(p) ? readFileSync(p, 'utf-8') : '';
+}
+
+function countTasks(tasks) {
+  return (tasks.match(/^- \[([ x])\]/gm) || []).length;
+}
+
+function collectFiles(text) {
+  const matches = text.match(FILE_RE) || [];
+  return [...new Set(matches.map(m => m.trim()))];
+}
+
+function hasKeyword(text, patterns) {
+  const lower = text.toLowerCase();
+  return patterns.some(p => lower.includes(p.toLowerCase()));
+}
+
+function inferMode(changeDir) {
+  const state = readState(changeDir);
+
+  // Explicit override preserved
+  if (state.workflow === 'hotfix' || state.workflow === 'tweak') {
+    return {
+      mode: state.workflow,
+      explicit: true,
+      reason: `workflow explicitly set to '${state.workflow}' in .spec-superflow.yaml; skipping auto-detection`,
+    };
+  }
+
+  const proposal = readText(changeDir, 'proposal.md');
+  const tasks = readText(changeDir, 'tasks.md');
+  const combined = `${proposal}\n${tasks}`;
+
+  const taskCount = countTasks(tasks);
+  const files = collectFiles(combined);
+  const fileCount = files.length;
+
+  const hasSchemaChange = hasKeyword(combined, [
+    'schema', 'api', 'interface', '接口', 'validator', '类型',
+    'type definition', 'protobuf', 'openapi', 'json schema',
+  ]);
+  const hasNewModule = hasKeyword(combined, [
+    'new module', '新增模块', '新模块', '新增 skill', '新目录',
+    '新增 capability', 'new capability',
+  ]);
+
+  const allExts = files.map(f => {
+    const parts = f.split('.');
+    return parts[parts.length - 1].toLowerCase();
+  });
+  const codeFileCount = allExts.filter(e => CODE_EXTS.has(e)).length;
+  const configDocOnly = codeFileCount === 0 && allExts.every(e => CONFIG_DOC_EXTS.has(e));
+
+  // Hotfix: very small, no schema/api, no new module
+  if (taskCount <= 2 && fileCount <= 2 && !hasSchemaChange && !hasNewModule) {
+    return {
+      mode: 'hotfix',
+      explicit: false,
+      reason: `≤2 tasks, ≤2 files, no schema/API/new-module keywords → hotfix`,
+    };
+  }
+
+  // Tweak: small config/doc change
+  if (taskCount <= 4 && configDocOnly && !hasSchemaChange && !hasNewModule) {
+    return {
+      mode: 'tweak',
+      explicit: false,
+      reason: `≤4 tasks, only config/doc files, no schema/API/new-module keywords → tweak`,
+    };
+  }
+
+  // Default
+  return {
+    mode: 'full',
+    explicit: false,
+    reason: `${taskCount} tasks, ${fileCount} files${codeFileCount > 0 ? ` (${codeFileCount} code files)` : ''}${hasSchemaChange ? ', schema/API change detected' : ''}${hasNewModule ? ', new module detected' : ''} → full`,
+  };
+}
+
+function main() {
+  const changeDir = process.argv[2];
+  if (!changeDir) {
+    console.error('Usage: node scripts/infer-workflow.mjs <change-dir>');
+    process.exit(2);
+  }
+
+  const result = inferMode(changeDir);
+  console.log(JSON.stringify(result, null, 2));
+}
+
+export { inferMode };
+
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main();
+}

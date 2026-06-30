@@ -1,8 +1,12 @@
+# IDE / OS
 .DS_Store
 Thumbs.db
 
 .idea/
 .vscode/
+
+# Client-local generated deploy directories
+.cursor/
 
 *.log
 *.tmp

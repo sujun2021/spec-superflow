@@ -72,9 +72,33 @@ Before routing, check project configuration:
 
 ## Mode Detection
 
-Before routing, check the workflow mode:
+Before routing, determine the workflow mode.
+
+### Auto-Detection
+
+If `.spec-superflow.yaml` workflow is `auto`, `null`, or unset:
+
+1. Run: `node scripts/infer-workflow.mjs <change-dir>`
+2. The script inspects `proposal.md` scope and `tasks.md` to infer `hotfix`, `tweak`, or `full`.
+3. Run: `ssf state set <dir> workflow <mode>` to persist the inferred mode.
+4. Output the inferred mode and reason to the user.
+
+Inference rules:
+
+- **hotfix**: ≤2 tasks, ≤2 files, no schema/API changes, no new modules.
+- **tweak**: ≤4 tasks, only config/doc files (`.md`, `.json`, `.yaml`, etc.), no schema/API changes, no new modules.
+- **full**: anything larger, or changes that touch code files, schemas, APIs, or add new modules.
+
+### Explicit Override
+
+If workflow is already set to `hotfix`, `tweak`, or `full`, do **not** overwrite it unless the user explicitly asks to re-detect.
+
+### Validation
+
+After the mode is known, validate it against artifact content:
+
 1. Run: `ssf state get <change-dir> workflow`
-2. If workflow is `full` or unset → standard routing (no changes)
+2. If workflow is `full` → standard routing (no fast-path)
 3. If workflow is `hotfix`:
    - Validate: ≤2 files? No new modules? No schema changes?
    - All pass → use hotfix fast-path routing
@@ -83,6 +107,12 @@ Before routing, check the workflow mode:
    - Validate: ≤4 files? Single module? Config/doc/prompt only?
    - All pass → use tweak fast-path routing
    - Any fail → upgrade to `full`, run `ssf state set <dir> workflow full`, output upgrade reason
+
+### Example
+
+- A one-line fix in `scripts/lib/cmd-doctor.mjs` with ≤2 tasks → infer `hotfix`.
+- Updating `README.md` and `CHANGELOG.md` with ≤4 tasks → infer `tweak`.
+- Adding a new platform inject path with new files, tests, and schema changes → infer `full`.
 
 ## Enhanced Stale Detection via Content Inspection
 
@@ -210,7 +240,9 @@ When workflow is `tweak`:
 ### Post-Transition Injection Prompt
 
 After every successful `ssf state transition`, output:
-> 💡 Run `ssf inject <change-dir>` to update phase-guard.md with the new state.
+> 💡 Run `ssf inject <change-dir>` to update phase-guard artifacts across platforms (Claude, Cursor, Copilot, Gemini).
+
+To limit platforms, use `--platforms claude,cursor` or any subset.
 
 ## Staleness Rules
 

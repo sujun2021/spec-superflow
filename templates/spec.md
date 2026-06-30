@@ -1,31 +1,31 @@
-# Capability Spec
+# 能力规格
 
 ## ADDED Requirements
 
-### Requirement: Example requirement
+### Requirement: 需求名称
 
-The system SHALL provide the required behavior clearly and testably.
+The system SHALL 提供清晰且可测试的所需行为。
 
-#### Scenario: Happy path
+#### Scenario: 正常路径
 
-- **WHEN** the triggering action happens
-- **THEN** the system produces the expected result
+- **WHEN** 触发动作发生
+- **THEN** 系统产生预期结果
 
 ## MODIFIED Requirements
 
-### Requirement: Existing requirement name
+### Requirement: 现有需求名称
 
-The system SHALL follow the updated behavior exactly as described here.
+The system SHALL 按此处描述的更新行为执行。
 
-#### Scenario: Updated behavior
+#### Scenario: 更新后的行为
 
-- **WHEN** a known existing path is exercised
-- **THEN** the new approved behavior occurs
+- **WHEN** 执行某个已知现有路径
+- **THEN** 出现新的 approved behavior
 
 ## REMOVED Requirements
 
-### Requirement: Deprecated requirement
+### Requirement: 已弃用需求名称
 
-**Reason**: Why the behavior is being removed.
+**Reason**: 为什么要移除该行为。
 
-**Migration**: What should replace it.
+**Migration**: 应该用什么替代它。

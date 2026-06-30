@@ -150,6 +150,20 @@ If PASS → proceed to final checks.
 - Are there unresolved blockers or known risks?
 - Is the change ready to archive, or should it remain active?
 - Do delta specs exist that need merging into main specs?
+- **Has `ssf audit <change-dir>` been run?** If not, run it now and include `decision-point-audit.md` in the archive.
+
+## Decision-Point Audit Report
+
+Before final closure, run:
+
+```bash
+ssf audit <change-dir>
+```
+
+This generates `changes/<change-dir>/decision-point-audit.md` from `.spec-superflow.yaml`. Include this report in the archive so the full decision history is preserved.
+
+- If the audit report is missing, prompt the user to run `ssf audit <change-dir>` before DP-7 confirmation.
+- The audit command is read-only and safe to run multiple times.
 
 ## Output
 

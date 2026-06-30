@@ -1,37 +1,37 @@
-# Technical Design
+# 技术设计
 
-## Context
+## 上下文
 
-- Current state:
-- Constraints:
-- Stakeholders:
+- 当前状态：
+- 约束条件：
+- 利益相关者：
 
-## Goals
+## 目标
 
-- What this design must achieve
+- 本设计必须达成什么
 
-## Non-Goals
+## 非目标
 
-- What this design deliberately does not solve
+- 本设计刻意不解决什么
 
-## Decisions
+## 决策
 
-### Decision 1
+### 决策 1
 
-- Choice:
-- Rationale:
-- Alternatives considered:
+- **选择**：
+- **理由**：
+- **考虑的替代方案**：
 
-## Risks And Trade-Offs
+## 风险与权衡
 
-- Risk -> Mitigation
+- 风险 → 缓解措施
 
-## Migration Plan
+## 迁移计划
 
-- Rollout steps:
-- Rollback steps:
+- 上线步骤：
+- 回滚步骤：
 
-## Open Questions
+## 待明确问题
 
-- Question:
-- Decision owner:
+- 问题：
+- 决策负责人：

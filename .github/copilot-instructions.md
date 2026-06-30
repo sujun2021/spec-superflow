@@ -1,4 +1,4 @@
-# Phase Guard: v0.7.0-aware-and-platform-fixes
+# Phase Guard
 
 **当前阶段**: executing | **工作流**: full
 

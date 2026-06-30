@@ -4,6 +4,22 @@ All notable changes to `spec-superflow` will be documented in this file.
 
 The format loosely follows Keep a Changelog.
 
+## [0.7.0] - 2026-06-30
+
+### Added
+
+- **Multi-platform phase-guard injection** — `ssf inject` now generates phase-guard artifacts for Claude Code (`.claude/always/phase-guard.md`), Cursor (`.cursor/rules/phase-guard.mdc`), Copilot (`.github/copilot-instructions.md`), and Gemini (`GEMINI.md`). New `--platforms` flag limits output to a subset.
+- **Auto workflow-mode detection** — `workflow-orchestrator` infers `hotfix`/`tweak`/`full` from artifact content when `.spec-superflow.yaml` workflow is `auto`. Added `scripts/infer-workflow.mjs` helper. Explicit workflow values are preserved.
+- **Decision-point audit report** — New `ssf audit <change-dir>` command reads `.spec-superflow.yaml` DP fields and generates `decision-point-audit.md` with a summary table and per-DP interpretation.
+- **Cursor local deploy** — New `scripts/install-cursor.mjs` copies skills to `.cursor/skills/` and creates `.cursor/rules/phase-guard.mdc` for Cursor Agent.
+- **Template localization** — All planning templates under `templates/` are now in Chinese while keeping required parsing markers intact.
+
+### Fixed
+
+- **Copilot CLI plugin manifest** — Root `plugin.json` `author` is now an object (`{ "name": "..." }`) to satisfy Copilot CLI strict validation.
+- **`ssf doctor` author check** — Added validation for root `plugin.json` `author` format.
+- **INSTALL.md accuracy** — Cursor and Copilot CLI install instructions now describe the actual working mechanisms.
+
 ## [0.6.0] - 2026-06-29
 
 ### Added

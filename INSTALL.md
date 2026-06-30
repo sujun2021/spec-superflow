@@ -34,23 +34,39 @@ git clone https://github.com/MageByte-Zero/spec-superflow.git
 
 ## Cursor
 
-### Marketplace Install（推荐）
+Cursor 不会自动加载 `.cursor-plugin/plugin.json` 中的 `skills`，需要通过本地部署方式安装。
 
-在 Cursor Agent chat 中：
-
-```
-/add-plugin spec-superflow
-```
-
-或者搜索 "spec-superflow" 在 Cursor 插件市场中找到并安装。
-
-### 手动安装
+### 自动部署（推荐）
 
 ```bash
 git clone https://github.com/MageByte-Zero/spec-superflow.git
+cd your-project
+node /absolute/path/to/spec-superflow/scripts/install-cursor.mjs
 ```
 
-Cursor 会自动发现 `.cursor-plugin/` 目录下的插件。
+脚本会完成：
+- 把 `spec-superflow/skills/` 复制到 `.cursor/skills/`
+- 生成 `.cursor/rules/phase-guard.mdc`（alwaysApply）
+
+### 手动部署
+
+```bash
+git clone https://github.com/MageByte-Zero/spec-superflow.git
+mkdir -p .cursor/skills
+cp -R /absolute/path/to/spec-superflow/skills/* .cursor/skills/
+mkdir -p .cursor/rules
+# 然后手动创建 phase-guard.mdc，内容可参考 scripts/install-cursor.mjs
+```
+
+### 验证
+
+在 Cursor Agent 中输入：
+
+```
+/workflow-orchestrator
+```
+
+如果能看到技能被调用，说明安装成功。
 
 ## OpenAI Codex CLI
 
@@ -94,10 +110,14 @@ ln -s /absolute/path/to/spec-superflow/skills your-project/.agents/skills
 
 ## GitHub Copilot CLI
 
-```
+Copilot CLI 会从仓库根目录的 `plugin.json` 和 `.claude-plugin/marketplace.json` 识别插件（后者被包含在官方支持的 marketplace 路径列表中）。
+
+```bash
 copilot plugin marketplace add MageByte-Zero/spec-superflow
 copilot plugin install spec-superflow@spec-superflow
 ```
+
+如果安装失败，请检查根目录 `plugin.json` 的 `author` 字段是否为对象（`{ "name": "..." }`），而不是字符串。
 
 ## Gemini CLI
 

@@ -11,6 +11,7 @@ function readJsonIfExists(filePath) {
 function checkVersionConsistency(root) {
   const files = [
     { name: 'package.json', path: ['version'] },
+    { name: 'plugin.json', path: ['version'] },
     { name: '.claude-plugin/plugin.json', path: ['version'] },
     { name: '.claude-plugin/marketplace.json', path: ['plugins', '0', 'version'] },
     { name: '.cursor-plugin/plugin.json', path: ['version'] },
@@ -83,6 +84,24 @@ function checkDist(root) {
   return { pass: true, message: 'compiled' };
 }
 
+function checkRootPluginAuthor(root) {
+  const pluginPath = join(root, 'plugin.json');
+  const plugin = readJsonIfExists(pluginPath);
+  if (!plugin) {
+    return { pass: false, message: 'plugin.json not found' };
+  }
+  if (!plugin.author) {
+    return { pass: false, message: 'missing author field' };
+  }
+  if (typeof plugin.author === 'string') {
+    return { pass: false, message: 'author must be an object (got string)' };
+  }
+  if (typeof plugin.author === 'object' && !Array.isArray(plugin.author) && plugin.author.name) {
+    return { pass: true, message: `author.name = ${plugin.author.name}` };
+  }
+  return { pass: false, message: 'author object must contain a name property' };
+}
+
 function checkNodeVersion() {
   const major = parseInt(process.version.slice(1).split('.')[0], 10);
   if (major >= 22) {
@@ -138,6 +157,7 @@ export async function run(args) {
 
   const checks = [
     ['Version', checkVersionConsistency(root)],
+    ['Root plugin author', checkRootPluginAuthor(root)],
     ['Hooks', checkHooks(root)],
     ['Skills', checkSkills(root)],
     ['dist/', checkDist(root)],

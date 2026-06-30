@@ -1,6 +1,6 @@
-// scripts/lib/cmd-inject.mjs — ssf inject: generate phase-guard.md and install to .claude/always/
+// scripts/lib/cmd-inject.mjs — ssf inject: generate phase-guard artifacts for multiple platforms
 import { readFileSync, writeFileSync, mkdirSync, existsSync } from 'node:fs';
-import { join, basename } from 'node:path';
+import { join, dirname } from 'node:path';
 import { parseArgs } from 'node:util';
 import { readState } from './state-loader.mjs';
 
@@ -143,6 +143,12 @@ const PHASE_TEMPLATES = {
 - 不得从 abandoned 状态转换`,
 };
 
+const SUPPORTED_PLATFORMS = ['claude', 'cursor', 'copilot', 'gemini'];
+const PHASE_GUARD_MARKERS = {
+  start: '\n\n<!-- spec-superflow-phase-guard-start -->\n',
+  end: '<!-- spec-superflow-phase-guard-end -->\n',
+};
+
 function generatePhaseGuard(state) {
   const template = PHASE_TEMPLATES[state.state] || PHASE_TEMPLATES['exploring'];
   return template
@@ -151,22 +157,96 @@ function generatePhaseGuard(state) {
     .replace(/\{\{workflow\}\}/g, state.workflow || 'full');
 }
 
-function installRule(content, projectRoot) {
-  const alwaysDir = join(projectRoot, '.claude', 'always');
-  mkdirSync(alwaysDir, { recursive: true });
-  writeFileSync(join(alwaysDir, 'phase-guard.md'), content);
+function toCursorMdc(base) {
+  return `---
+description: spec-superflow phase guard
+alwaysApply: true
+---
+
+${base}`;
 }
+
+function toCopilotInstructions(base) {
+  // Base already starts with "# Phase Guard: ..."; ensure a clear top-level heading.
+  return base.replace(/^# Phase Guard:.*$/m, '# Phase Guard');
+}
+
+function injectGemini(base, geminiPath) {
+  const section = `# Phase Guard\n\n${base.replace(/^# Phase Guard:.*\n?/m, '').trim()}\n`;
+  const wrapped = `${PHASE_GUARD_MARKERS.start}${section}${PHASE_GUARD_MARKERS.end}`;
+
+  let content = '';
+  if (existsSync(geminiPath)) {
+    content = readFileSync(geminiPath, 'utf-8');
+  }
+
+  const startIdx = content.indexOf(PHASE_GUARD_MARKERS.start);
+  if (startIdx !== -1) {
+    const endIdx = content.indexOf(PHASE_GUARD_MARKERS.end, startIdx);
+    if (endIdx !== -1) {
+      content = content.slice(0, startIdx) + wrapped + content.slice(endIdx + PHASE_GUARD_MARKERS.end.length);
+    } else {
+      content = content.slice(0, startIdx) + wrapped;
+    }
+  } else {
+    content = content.trimEnd() + '\n' + wrapped;
+  }
+
+  writeFileSync(geminiPath, content, 'utf-8');
+}
+
+function writeFile(filePath, content) {
+  mkdirSync(dirname(filePath), { recursive: true });
+  writeFileSync(filePath, content, 'utf-8');
+}
+
+const PLATFORM_WRITERS = {
+  claude(base, projectRoot) {
+    const rulesDir = join(projectRoot, 'rules');
+    const alwaysDir = join(projectRoot, '.claude', 'always');
+    mkdirSync(rulesDir, { recursive: true });
+    mkdirSync(alwaysDir, { recursive: true });
+    writeFileSync(join(rulesDir, 'phase-guard.md'), base);
+    writeFileSync(join(alwaysDir, 'phase-guard.md'), base);
+  },
+  cursor(base, projectRoot) {
+    const cursorRulesDir = join(projectRoot, '.cursor', 'rules');
+    mkdirSync(cursorRulesDir, { recursive: true });
+    writeFileSync(join(cursorRulesDir, 'phase-guard.mdc'), toCursorMdc(base));
+  },
+  copilot(base, projectRoot) {
+    const copilotPath = join(projectRoot, '.github', 'copilot-instructions.md');
+    writeFile(copilotPath, toCopilotInstructions(base));
+  },
+  gemini(base, projectRoot) {
+    injectGemini(base, join(projectRoot, 'GEMINI.md'));
+  },
+};
 
 export async function run(args) {
   const { values, positionals } = parseArgs({
     args,
-    options: { json: { type: 'boolean', default: false } },
+    options: {
+      json: { type: 'boolean', default: false },
+      platforms: { type: 'string' },
+    },
     allowPositionals: true,
   });
 
   const changeDir = positionals[0];
   if (!changeDir) {
-    console.error('Usage: ssf inject <change-dir> [--json]');
+    console.error('Usage: ssf inject <change-dir> [--platforms claude,cursor,copilot,gemini] [--json]');
+    process.exit(2);
+  }
+
+  const requested = values.platforms
+    ? values.platforms.split(',').map(p => p.trim().toLowerCase())
+    : SUPPORTED_PLATFORMS;
+
+  const invalid = requested.filter(p => !SUPPORTED_PLATFORMS.includes(p));
+  if (invalid.length > 0) {
+    console.error(`Unsupported platform(s): ${invalid.join(', ')}`);
+    console.error(`Supported: ${SUPPORTED_PLATFORMS.join(', ')}`);
     process.exit(2);
   }
 
@@ -177,22 +257,22 @@ export async function run(args) {
   }
   const state = readState(changeDir);
 
-  // Generate phase-guard.md
-  const content = generatePhaseGuard(state);
+  // Generate base phase-guard content
+  const base = generatePhaseGuard(state);
+  const projectRoot = process.cwd();
+  const outputs = [];
 
-  // Write to rules/ directory
-  const rulesDir = 'rules';
-  mkdirSync(rulesDir, { recursive: true });
-  writeFileSync(join(rulesDir, 'phase-guard.md'), content);
-
-  // Install to .claude/always/
-  installRule(content, process.cwd());
+  for (const platform of requested) {
+    PLATFORM_WRITERS[platform](base, projectRoot);
+    outputs.push(platform);
+  }
 
   if (values.json) {
-    console.log(JSON.stringify({ ok: true, state: state.state, workflow: state.workflow, change_name: state.change_name }));
+    console.log(JSON.stringify({ ok: true, platforms: outputs, state: state.state, workflow: state.workflow, change_name: state.change_name }));
   } else {
-    console.log(`✅ Generated rules/phase-guard.md`);
-    console.log(`✅ Installed to .claude/always/phase-guard.md`);
+    for (const platform of outputs) {
+      console.log(`✅ Injected ${platform}`);
+    }
     console.log(`   Change: ${state.change_name} | State: ${state.state} | Workflow: ${state.workflow}`);
   }
 }

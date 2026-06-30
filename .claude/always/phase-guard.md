@@ -1,14 +1,16 @@
-# Phase Guard: v0.6.0-fast-and-aware
+# Phase Guard: v0.7.0-aware-and-platform-fixes
 
-**当前阶段**: approved | **工作流**: full
+**当前阶段**: executing | **工作流**: full
 
 ## ✅ 允许操作
-- 选择执行模式（TDD 或 SDD）
-- 准备执行环境
+- 按 execution-contract.md 执行任务
+- 运行测试
+- 提交代码（按 batch 提交）
 
 ## ⛔ 禁止操作
-- 修改 execution-contract.md（需回退到 bridging）
-- 修改 proposal.md, specs/, design.md, tasks.md
+- 修改 proposal.md, specs/, design.md（需先回退到 specifying）
+- 修改 execution-contract.md（需先回退到 bridging）
+- 跳过测试步骤
 
 ## 🔔 决策点
-- DP-4: 执行模式选择 — 用户选择 TDD 或 SDD
+- DP-5: 调试升级 — 3+ 修复失败后需用户决定

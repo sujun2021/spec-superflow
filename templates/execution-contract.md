@@ -1,69 +1,69 @@
-# Execution Contract
+# 执行合同
 
 ## Intent Lock
 
-- Change name:
-- Problem being solved:
-- In scope:
-- Out of scope:
+- **变更名称**：
+- **要解决的问题**：
+- **范围内**：
+- **范围外**：
 
 ## Approved Behavior
 
-- Approved requirements summary:
-- Key scenarios:
-- Acceptance checks:
+- **已批准需求摘要**：
+- **关键场景**：
+- **验收检查**：
 
 ## Design Constraints
 
-- Architecture constraints:
-- Interface constraints:
-- Dependency constraints:
-- Data constraints:
+- **架构约束**：
+- **接口约束**：
+- **依赖约束**：
+- **数据约束**：
 
 ## Task Batches
 
 ### Batch 1
 
-- Objective:
-- Inputs:
-- Outputs:
-- Done when:
+- **目标**：
+- **输入**：
+- **输出**：
+- **完成标准**：
 
 ### Batch 2
 
-- Objective:
-- Inputs:
-- Outputs:
-- Done when:
+- **目标**：
+- **输入**：
+- **输出**：
+- **完成标准**：
 
 ## Test Obligations
 
-- Behavior that must start with failing tests:
-- Required edge cases:
-- Regression-sensitive areas:
+- **必须先从失败测试开始的行为**：
+- **必需的边界情况**：
+- **回归敏感区域**：
 
 ## Execution Mode
 
-- **Mode**: `SDD` | `Inline`
-- **Selection rationale**: [why this mode was chosen — task count, dependency analysis]
+- **模式**：`TDD` | `SDD`
+- **选择理由**：
 
 ## Verification Dimensions
 
-| Dimension | Status | Findings |
-|-----------|--------|----------|
+| 维度 | 状态 | 发现 |
+|------|------|------|
 | Completeness | Pending | — |
 | Correctness | Pending | — |
 | Coherence | Pending | — |
 
-**Overall verdict**: Pending
+**总体结论**：Pending
 
 ## Review Gates
 
-- Mandatory review points:
-- Blocker categories:
+- **强制审查点**：
+- **阻塞类别**：
 
 ## Escalation Rules
 
-- Return to `specifying` when:
-- Return to `bridging` when:
-- Do not continue implementation if:
+- **何时回退到 `specifying`**：
+- **何时回退到 `bridging`**：
+- **何时不得继续实现**：
