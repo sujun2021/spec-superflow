@@ -4,6 +4,22 @@ All notable changes to `spec-superflow` will be documented in this file.
 
 The format loosely follows Keep a Changelog.
 
+## [0.8.3] - 2026-07-01
+
+### Added
+
+- **130 new tests** — CLI scripts (`cmd-list`, `cmd-state`, `cmd-audit`, `cmd-doctor`, `cmd-inject`) and guard system now have comprehensive test coverage. 152 total tests (up from 22), covering config loading, state management, hash computation, guard transitions, workflow inference, and phase guard generation.
+
+### Fixed
+
+- **`infer-workflow` empty directory** — previously returned `hotfix` for empty change directories (0 tasks, 0 files); now correctly returns `full` as the safe default.
+
+### Changed
+
+- **Refactored guard run loop** — switch-case replaced with `CHECK_RUNNERS` lookup map for cleaner dimension dispatch.
+- **Deduplicated `cmd-validate`** — `design.md` and `tasks.md` structural validation merged into a single config-driven loop.
+- **Exported internal functions** — `detectChangeStatus` (cmd-list), `generateReport`/`DP_NAMES` (cmd-audit), 7 doctor check functions (cmd-doctor), `generatePhaseGuard`/`toCursorMdc`/`toCopilotInstructions` (cmd-inject) now exported for direct unit testing.
+
 ## [0.8.2] - 2026-07-01
 
 ### Added
