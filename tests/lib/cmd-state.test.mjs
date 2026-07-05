@@ -134,6 +134,31 @@ describe('cmd-state: transition', () => {
     const parsed = JSON.parse(result.stdout);
     assert.equal(parsed.state, 'specifying');
   });
+
+  it('rejects exploring to approved-for-build when workflow is auto', () => {
+    rmSync(join(tempDir, '.spec-superflow.yaml'), { force: true });
+    ssf(`state init ${tempDir}`);
+
+    const result = ssf(`state transition ${tempDir} approved-for-build`);
+    assert.equal(result.exitCode, 1);
+    assert.match(result.stderr || result.stdout, /workflow-mode|fast-path|tweak/i);
+
+    const check = ssf(`state get ${tempDir} state`);
+    assert.equal(check.stdout.trim(), 'exploring');
+  });
+
+  it('rejects exploring to bridging when workflow is full', () => {
+    rmSync(join(tempDir, '.spec-superflow.yaml'), { force: true });
+    ssf(`state init ${tempDir}`);
+    ssf(`state set ${tempDir} workflow full`);
+
+    const result = ssf(`state transition ${tempDir} bridging`);
+    assert.equal(result.exitCode, 1);
+    assert.match(result.stderr || result.stdout, /workflow-mode|fast-path|hotfix|tweak/i);
+
+    const check = ssf(`state get ${tempDir} state`);
+    assert.equal(check.stdout.trim(), 'exploring');
+  });
 });
 
 describe('cmd-state: get', () => {
