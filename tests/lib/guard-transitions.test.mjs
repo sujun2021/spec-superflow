@@ -229,4 +229,16 @@ describe('Fast-path validation', () => {
       assert.ok(!result.stderr?.includes('unknown'), `Tweak fast-path should be defined: ${result.stderr}`);
     }
   });
+
+  it('SHALL reject hotfix fast-path when workflow is full', () => {
+    const result = runGuard('exploring', 'bridging', dir, 'full');
+    assert.equal(result.ok, false, 'exploring -> bridging must be rejected in full workflow');
+    assert.match(result.stderr, /workflow-mode|fast-path|hotfix|tweak/i);
+  });
+
+  it('SHALL reject tweak fast-path when workflow is full', () => {
+    const result = runGuard('exploring', 'approved-for-build', dir, 'full');
+    assert.equal(result.ok, false, 'exploring -> approved-for-build must be rejected in full workflow');
+    assert.match(result.stderr, /workflow-mode|fast-path|tweak/i);
+  });
 });
