@@ -13,7 +13,7 @@ let tempDir;
 function ssf(args, options = {}) {
   try {
     const result = execSync(
-      `node ${CLI_PATH} ${args}`,
+      `${shellQuote(process.execPath)} ${shellQuote(CLI_PATH)} ${args}`,
       { encoding: 'utf-8', stdio: ['pipe', 'pipe', 'pipe'], ...options }
     );
     return { exitCode: 0, stdout: result.trim(), stderr: '' };
@@ -215,6 +215,22 @@ describe('cmd-state: transition', () => {
     } finally {
       rmSync(shimDir, { recursive: true, force: true });
     }
+  });
+
+  it('reports guard spawn errors without changing state', () => {
+    rmSync(join(tempDir, '.spec-superflow.yaml'), { force: true });
+    ssf(`state init ${tempDir}`);
+
+    const result = ssf(`state transition ${tempDir} specifying`, {
+      env: { ...process.env, PATH: '' },
+    });
+    assert.equal(result.exitCode, 1);
+    const output = result.stderr || result.stdout;
+    assert.match(output, /guard-error|spawn|ENOENT/i);
+    assert.doesNotMatch(output, /TypeError/i);
+
+    const check = ssf(`state get ${tempDir} state`);
+    assert.equal(check.stdout.trim(), 'exploring');
   });
 });
 

@@ -113,15 +113,22 @@ export async function run(args) {
         timeout: 10_000,
       });
 
-      const guardOutput = guardResult.stdout.toString();
+      const guardOutput = guardResult.stdout?.toString() ?? '';
+      const guardStderr = guardResult.stderr?.toString().trim() ?? '';
+      if (guardResult.error) {
+        console.error(`Guard check failed for ${fromState} -> ${toState}:`);
+        console.error(`  [guard-error] ${guardResult.error.message}`);
+        if (guardStderr) console.error(`  ${guardStderr}`);
+        process.exit(1);
+      }
+
       let parsed;
       try {
         parsed = JSON.parse(guardOutput);
       } catch {
-        const stderr = guardResult.stderr.toString().trim();
         console.error(`Guard check failed for ${fromState} -> ${toState}:`);
         console.error('  [guard-error] Guard did not return valid JSON.');
-        if (stderr) console.error(`  ${stderr}`);
+        if (guardStderr) console.error(`  ${guardStderr}`);
         process.exit(1);
       }
 
