@@ -4,7 +4,7 @@
 
 import { describe, it, before, after } from 'node:test';
 import assert from 'node:assert/strict';
-import { execSync } from 'node:child_process';
+import { execFileSync } from 'node:child_process';
 import { mkdtempSync, writeFileSync, rmSync, mkdirSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
@@ -39,7 +39,7 @@ function runClosingGuard(dir, extraState = '') {
       join(dir, '.spec-superflow.yaml'),
       `state: executing\nworkflow: full\nchange_name: test\ndp_6_result: pass: ok\n${extraState}`,
     );
-    execSync(`node ${GUARD} check "${dir}" executing closing --json`, { stdio: 'pipe', timeout: 5000 });
+    execFileSync('node', [GUARD, 'check', dir, 'executing', 'closing', '--json'], { stdio: 'pipe', timeout: 5000 });
     return { ok: true, out: '' };
   } catch (e) {
     const out = `${e.stdout?.toString() || ''}\n${e.stderr?.toString() || ''}`;
