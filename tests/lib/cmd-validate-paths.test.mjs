@@ -59,6 +59,24 @@ describe('validate commands: spec paths', () => {
     assert.match(result.stdout + result.stderr, /No canonical spec files found/);
   });
 
+  it('ssf validate rejects a change with no specs/ directory', () => {
+    const dir = mkdtempSync(join(tempRoot, 'missing-specs-cli-'));
+    writeBaseChange(dir);
+
+    const result = runNode([CLI, 'validate', dir]);
+    assert.equal(result.exitCode, 1);
+    assert.match(result.stdout + result.stderr, /No canonical spec files found/);
+  });
+
+  it('validate-artifacts rejects a change with no specs/ directory', () => {
+    const dir = mkdtempSync(join(tempRoot, 'missing-specs-legacy-'));
+    writeBaseChange(dir);
+
+    const result = runNode([LEGACY, dir]);
+    assert.equal(result.exitCode, 1);
+    assert.match(result.stdout + result.stderr, /No canonical spec files found/);
+  });
+
   it('ssf validate accepts canonical specs/<capability>/spec.md', () => {
     const dir = mkdtempSync(join(tempRoot, 'canonical-'));
     writeBaseChange(dir);

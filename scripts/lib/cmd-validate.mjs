@@ -53,25 +53,22 @@ export async function run(args) {
   }
 
   // Validate specs/*/spec.md
-  const specsDir = join(changeDir, 'specs');
-  if (existsSync(specsDir)) {
-    const specLayout = validateSpecPathLayout(changeDir, { requireSpecs: true });
-    for (const failure of specLayout.failures) {
-      printReport('specs/', {
-        valid: false,
-        issues: [{ level: 'ERROR', path: 'specs/', message: failure }],
-        summary: { errors: 1, warnings: 0, info: 0 },
-      });
-      hasErrors = true;
-    }
+  const specLayout = validateSpecPathLayout(changeDir, { requireSpecs: true });
+  for (const failure of specLayout.failures) {
+    printReport('specs/', {
+      valid: false,
+      issues: [{ level: 'ERROR', path: 'specs/', message: failure }],
+      summary: { errors: 1, warnings: 0, info: 0 },
+    });
+    hasErrors = true;
+  }
 
-    for (const specFile of specLayout.specFiles) {
-      const content = readFileSync(specFile, 'utf-8');
-      const report = validator.validateDeltaSpec(content);
-      const rel = relativeSpecPath(changeDir, specFile);
-      printReport(rel, report);
-      if (!report.valid) hasErrors = true;
-    }
+  for (const specFile of specLayout.specFiles) {
+    const content = readFileSync(specFile, 'utf-8');
+    const report = validator.validateDeltaSpec(content);
+    const rel = relativeSpecPath(changeDir, specFile);
+    printReport(rel, report);
+    if (!report.valid) hasErrors = true;
   }
 
   // Basic structural validation for design.md and tasks.md (shared pattern)
