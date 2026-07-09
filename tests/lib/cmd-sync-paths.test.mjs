@@ -4,6 +4,7 @@ import { execFileSync } from 'node:child_process';
 import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+import { deriveCapabilityDir } from '../../scripts/lib/cmd-sync.mjs';
 
 const CLI = join(process.cwd(), 'scripts/spec-superflow.mjs');
 let tempRoot;
@@ -50,6 +51,13 @@ describe('cmd-sync: canonical spec paths', () => {
     assert.match(readFileSync(join(repo, 'specs', 'ui-theme', 'spec.md'), 'utf-8'), /Sync path/);
   });
 
+  it('derives capability dirs from Windows-style spec paths', () => {
+    assert.equal(
+      deriveCapabilityDir('C:\\repo\\changes\\feature\\specs', 'C:\\repo\\changes\\feature\\specs\\ui-theme\\spec.md'),
+      'ui-theme',
+    );
+  });
+
   it('rejects flat specs before syncing', () => {
     const repo = mkdtempSync(join(tempRoot, 'repo-flat-'));
     const change = join(repo, 'changes', 'flat');
@@ -60,5 +68,17 @@ describe('cmd-sync: canonical spec paths', () => {
     assert.equal(result.exitCode, 1);
     assert.match(result.stdout + result.stderr, /Invalid spec path: specs\/ui-theme\.md/);
     assert.equal(existsSync(join(repo, 'specs', 'ui-theme', 'spec.md')), false);
+  });
+
+  it('rejects root specs/spec.md before syncing', () => {
+    const repo = mkdtempSync(join(tempRoot, 'repo-root-'));
+    const change = join(repo, 'changes', 'root-spec');
+    mkdirSync(join(change, 'specs'), { recursive: true });
+    writeSpec(join(change, 'specs', 'spec.md'));
+
+    const result = runSync(repo, change);
+    assert.equal(result.exitCode, 1);
+    assert.match(result.stdout + result.stderr, /Invalid spec path: specs\/spec\.md/);
+    assert.equal(existsSync(join(repo, 'specs', 'spec.md')), false);
   });
 });

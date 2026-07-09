@@ -1,8 +1,21 @@
 // ssf sync <change-dir> — merge delta specs into main specs with conflict detection
 import { readFileSync, readdirSync, writeFileSync, existsSync, statSync, mkdirSync } from 'node:fs';
-import { join, basename } from 'node:path';
-import { loadConfig } from './config-loader.mjs';
+import path, { join, basename } from 'node:path';
 import { validateSpecPathLayout } from './spec-paths.mjs';
+
+function toPosix(value) {
+  return value.replace(/\\/g, '/');
+}
+
+function pathApiFor(...values) {
+  return values.some(value => value.includes('\\')) ? path.win32 : path.posix;
+}
+
+export function deriveCapabilityDir(changeSpecsDir, specFile) {
+  const api = pathApiFor(changeSpecsDir, specFile);
+  const relative = toPosix(api.relative(changeSpecsDir, specFile));
+  return relative.replace(/\/spec\.md$/, '');
+}
 
 export async function run(args) {
   if (args.length < 1) {
@@ -16,8 +29,7 @@ export async function run(args) {
     process.exit(2);
   }
 
-  const config = loadConfig(process.cwd());
-  const { Validator, parseDeltaSpec } = await import('../../dist/index.js');
+  const { Validator } = await import('../../dist/index.js');
   const validator = new Validator();
 
   // Collect all unsynced changes for conflict detection
@@ -73,8 +85,7 @@ export async function run(args) {
   let synced = 0;
 
   for (const specFile of layout.specFiles) {
-    const relative = specFile.replace(changeSpecsDir + '/', '');
-    const capabilityDir = relative.replace(/\/spec\.md$/, '');
+    const capabilityDir = deriveCapabilityDir(changeSpecsDir, specFile);
     const targetDir = join(mainSpecsDir, capabilityDir);
 
     if (!existsSync(targetDir)) {
