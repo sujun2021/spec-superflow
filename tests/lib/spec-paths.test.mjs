@@ -28,6 +28,19 @@ describe('spec-paths', () => {
     assert.deepEqual(files, ['specs/a-ui/spec.md', 'specs/z-auth/spec.md']);
   });
 
+  it('ignores nested spec.md files when finding canonical specs', () => {
+    const dir = mkdtempSync(join(tempDir, 'nested-'));
+    mkdirSync(join(dir, 'specs', 'ui-theme', 'nested'), { recursive: true });
+    writeFileSync(join(dir, 'specs', 'ui-theme', 'nested', 'spec.md'), 'nested');
+
+    assert.deepEqual(mod.findCanonicalSpecFiles(dir), []);
+
+    const result = mod.validateSpecPathLayout(dir, { requireSpecs: true });
+    assert.equal(result.pass, false);
+    assert.deepEqual(result.specFiles, []);
+    assert.ok(result.failures.some(f => f.includes('No canonical spec files found')));
+  });
+
   it('reports flat capability specs with expected canonical path', () => {
     const dir = mkdtempSync(join(tempDir, 'flat-'));
     mkdirSync(join(dir, 'specs'), { recursive: true });

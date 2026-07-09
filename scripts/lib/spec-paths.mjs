@@ -32,7 +32,7 @@ export function findCanonicalSpecFiles(changeDir) {
     .filter(file => {
       if (path.basename(file) !== 'spec.md') return false;
       const rel = path.relative(root, file).split(path.sep);
-      return rel.length >= 2;
+      return rel.length === 2;
     })
     .sort();
 }
