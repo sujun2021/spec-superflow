@@ -59,7 +59,7 @@ const ILLEGAL_TRANSITIONS = [
 
 function makeChangeDir() {
   const dir = mkdtempSync(join(tmpdir(), 'ssf-guard-test-'));
-  mkdirSync(join(dir, 'specs'), { recursive: true });
+  mkdirSync(join(dir, 'specs', 'test'), { recursive: true });
   return dir;
 }
 
@@ -77,7 +77,7 @@ function runGuard(from, to, dir, workflow = 'full') {
     writeFileSync(join(dir, 'proposal.md'), '# Test\n\n## Why\n\nTest change for guard matrix audit.\n\n## What Changes\n\n- Test.\n');
     writeFileSync(join(dir, 'design.md'), '# Design\n\n## Context\n\nTest.\n\n## Goals\n\nTest.\n\n## Decisions\n\n### Decision 1\n- Choice: Test\n- Rationale: Test\n\n## Risks And Trade-Offs\n\nNone.\n');
     writeFileSync(join(dir, 'tasks.md'), '# Tasks\n\n- [x] Task 1\n- [x] Task 2\n');
-    writeFileSync(join(dir, 'specs', 'test.md'), '## ADDED Requirements\n\n### Requirement: Test\n\nThe system SHALL test.\n\n#### Scenario: Test\n- **WHEN** test\n- **THEN** test\n');
+    writeFileSync(join(dir, 'specs', 'test', 'spec.md'), '## ADDED Requirements\n\n### Requirement: Test\n\nThe system SHALL test.\n\n#### Scenario: Test\n- **WHEN** test\n- **THEN** test\n');
     writeFileSync(join(dir, 'execution-contract.md'), '# Execution Contract\n\n## Intent Lock\n\nTest.\n');
 
     const cmd = `node ${GUARD} check "${dir}" ${from} ${to}`;

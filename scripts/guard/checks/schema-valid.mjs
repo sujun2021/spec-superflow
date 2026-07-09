@@ -1,6 +1,7 @@
 // scripts/guard/checks/schema-valid.mjs — validate artifacts using the existing Validator engine
 import fs from 'node:fs';
 import path from 'node:path';
+import { validateSpecPathLayout, relativeSpecPath } from '../../lib/spec-paths.mjs';
 
 // Cached Validator instance, lazily loaded from dist/
 let _Validator = null;
@@ -42,23 +43,18 @@ export async function checkSchemaValid(changeDir) {
     }
   }
 
-  // Validate each specs/*/spec.md as delta specs
-  const specsDir = path.join(changeDir, 'specs');
-  if (fs.existsSync(specsDir)) {
-    for (const entry of fs.readdirSync(specsDir, { withFileTypes: true })) {
-      if (entry.isDirectory()) {
-        const specFile = path.join(specsDir, entry.name, 'spec.md');
-        if (fs.existsSync(specFile)) {
-          const content = fs.readFileSync(specFile, 'utf-8');
-          const report = validator.validateDeltaSpec(content);
-          for (const issue of report.issues) {
-            if (issue.level === 'ERROR') {
-              failures.push(`specs/${entry.name}/spec.md: ${issue.message}`);
-            } else if (issue.level === 'WARNING') {
-              warnings.push(`specs/${entry.name}/spec.md: ${issue.message}`);
-            }
-          }
-        }
+  const specLayout = validateSpecPathLayout(changeDir, { requireSpecs: true });
+  failures.push(...specLayout.failures);
+
+  for (const specFile of specLayout.specFiles) {
+    const content = fs.readFileSync(specFile, 'utf-8');
+    const report = validator.validateDeltaSpec(content);
+    const rel = relativeSpecPath(changeDir, specFile);
+    for (const issue of report.issues) {
+      if (issue.level === 'ERROR') {
+        failures.push(`${rel}: ${issue.message}`);
+      } else if (issue.level === 'WARNING') {
+        warnings.push(`${rel}: ${issue.message}`);
       }
     }
   }

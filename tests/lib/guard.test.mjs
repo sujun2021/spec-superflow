@@ -15,8 +15,8 @@ describe('guard: transition matrix', () => {
     tempDir = mkdtempSync(join(tmpdir(), 'ssf-guard-test-'));
     // Create minimal artifacts so artifact checks can pass
     writeFileSync(join(tempDir, 'proposal.md'), '## Why\nThis is a test proposal for guard testing purposes. The system needs to support feature X which will enable users to accomplish their goals more efficiently.\n## What Changes\n- Add feature X');
-    mkdirSync(join(tempDir, 'specs'), { recursive: true });
-    writeFileSync(join(tempDir, 'specs', 'spec.md'), '## ADDED Requirements\n### Requirement: Feature X\nThe system SHALL do X.\n#### Scenario: basic\n- **WHEN** user triggers\n- **THEN** system responds');
+    mkdirSync(join(tempDir, 'specs', 'test'), { recursive: true });
+    writeFileSync(join(tempDir, 'specs', 'test', 'spec.md'), '## ADDED Requirements\n### Requirement: Feature X\nThe system SHALL do X.\n#### Scenario: basic\n- **WHEN** user triggers\n- **THEN** system responds');
     writeFileSync(join(tempDir, 'design.md'), '## Context\nTest design\n## Decisions\n### Decision 1\n- Choice: A\n- Rationale: B');
     writeFileSync(join(tempDir, 'tasks.md'), '## File Structure\n- Create: src/x.ts\n## Tasks\n### 1.1 Task\n- [x] done');
   });

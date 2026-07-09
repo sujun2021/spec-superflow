@@ -2,6 +2,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { findCanonicalSpecFiles } from './spec-paths.mjs';
 
 // Compute a joint SHA256 hash of all 4 planning artifacts.
 // Input: proposal.md + specs/*/spec.md (sorted) + design.md + tasks.md
@@ -17,18 +18,9 @@ export function computeArtifactsHash(changeDir) {
   }
 
   // specs/*/spec.md (sorted for deterministic output)
-  // Only hash spec.md files — exclude README.md, design-notes.md, etc.
-  const specsDir = path.join(changeDir, 'specs');
-  if (fs.existsSync(specsDir)) {
-    const specFiles = [];
-    walkDir(specsDir, specFiles);
-    specFiles.sort();
-    for (const f of specFiles) {
-      if (path.basename(f) === 'spec.md') {
-        hash.update(fs.readFileSync(f, 'utf-8'));
-        hasContent = true;
-      }
-    }
+  for (const f of findCanonicalSpecFiles(changeDir)) {
+    hash.update(fs.readFileSync(f, 'utf-8'));
+    hasContent = true;
   }
 
   // design.md
@@ -68,14 +60,6 @@ export function isContractFresh(changeDir, stateLoader) {
 
   const currentHash = computeArtifactsHash(changeDir);
   return storedHash === currentHash;
-}
-
-function walkDir(dir, result) {
-  for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
-    const full = path.join(dir, entry.name);
-    if (entry.isDirectory()) walkDir(full, result);
-    else result.push(full);
-  }
 }
 
 function extractYamlField(content, field) {

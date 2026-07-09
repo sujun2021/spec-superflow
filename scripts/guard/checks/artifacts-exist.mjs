@@ -2,6 +2,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { loadConfig } from '../../lib/config-loader.mjs';
+import { validateSpecPathLayout } from '../../lib/spec-paths.mjs';
 
 /**
  * Check that required planning artifacts exist and are non-empty,
@@ -27,10 +28,8 @@ export function checkArtifactsExist(changeDir) {
   }
 
   if (!skipList.includes('specs')) {
-    const specsDir = path.join(changeDir, 'specs');
-    if (!fs.existsSync(specsDir) || fs.readdirSync(specsDir).length === 0) {
-      failures.push('specs/: missing or empty');
-    }
+    const specLayout = validateSpecPathLayout(changeDir, { requireSpecs: true });
+    failures.push(...specLayout.failures);
   }
 
   return { pass: failures.length === 0, failures };

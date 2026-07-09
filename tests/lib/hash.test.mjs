@@ -56,8 +56,8 @@ describe('hash: computeArtifactsHash()', () => {
 
   it('includes all four artifacts in hash', () => {
     writeFileSync(join(tempDir, 'proposal.md'), '## Why\nproposal content');
-    mkdirSync(join(tempDir, 'specs'), { recursive: true });
-    writeFileSync(join(tempDir, 'specs', 'spec.md'), '# Spec\nRequirement content');
+    mkdirSync(join(tempDir, 'specs', 'ui-theme'), { recursive: true });
+    writeFileSync(join(tempDir, 'specs', 'ui-theme', 'spec.md'), '# Spec\nRequirement content');
     writeFileSync(join(tempDir, 'design.md'), '# Design\nDesign content');
     writeFileSync(join(tempDir, 'tasks.md'), '# Tasks\nTasks content');
 
@@ -70,11 +70,12 @@ describe('hash: computeArtifactsHash()', () => {
     assert.notEqual(h1, h2);
   });
 
-  it('reads specs/*.md files in sorted order for determinism', () => {
-    mkdirSync(join(tempDir, 'specs'), { recursive: true });
+  it('reads canonical specs in sorted order for determinism', () => {
+    mkdirSync(join(tempDir, 'specs', 'z-auth'), { recursive: true });
+    mkdirSync(join(tempDir, 'specs', 'a-ui'), { recursive: true });
     writeFileSync(join(tempDir, 'proposal.md'), 'proposal');
-    writeFileSync(join(tempDir, 'specs', 'z-auth.md'), 'auth spec');
-    writeFileSync(join(tempDir, 'specs', 'a-ui.md'), 'ui spec');
+    writeFileSync(join(tempDir, 'specs', 'z-auth', 'spec.md'), 'auth spec');
+    writeFileSync(join(tempDir, 'specs', 'a-ui', 'spec.md'), 'ui spec');
 
     const h1 = hashMod.computeArtifactsHash(tempDir);
 
@@ -84,9 +85,9 @@ describe('hash: computeArtifactsHash()', () => {
   });
 
   it('ignores non-.md files in specs directory', () => {
-    mkdirSync(join(tempDir, 'specs'), { recursive: true });
+    mkdirSync(join(tempDir, 'specs', 'ui-theme'), { recursive: true });
     writeFileSync(join(tempDir, 'proposal.md'), 'proposal');
-    writeFileSync(join(tempDir, 'specs', 'spec.md'), 'spec content');
+    writeFileSync(join(tempDir, 'specs', 'ui-theme', 'spec.md'), 'spec content');
     writeFileSync(join(tempDir, 'specs', 'notes.txt'), 'some notes'); // non-.md
 
     const h1 = hashMod.computeArtifactsHash(tempDir);
