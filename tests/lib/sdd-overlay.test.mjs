@@ -1,6 +1,6 @@
 import { describe, it, beforeEach, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import {
@@ -69,6 +69,17 @@ describe('checkpoint storage', () => {
 });
 
 describe('handoff storage', () => {
+  it('creates HANDOFF.md and HANDOFF_RESULT.md and validates the latter on finish', () => {
+    const handoff = createHandoff(changeDir, validHandoffInput);
+    const handoffPath = join(handoff.directory, 'HANDOFF.md');
+    const resultPath = join(handoff.directory, 'HANDOFF_RESULT.md');
+
+    assert.equal(existsSync(handoffPath), true);
+    assert.equal(existsSync(resultPath), true);
+    writeFileSync(resultPath, validResult());
+    assert.equal(finishHandoff(changeDir, handoff.id).status, 'result-ready');
+  });
+
   it('keeps a handoff active when finish validation fails', () => {
     const handoff = createHandoff(changeDir, validHandoffInput);
 
@@ -90,14 +101,18 @@ describe('handoff storage', () => {
 
 function createReadyHandoff() {
   const handoff = createHandoff(changeDir, validHandoffInput);
-  const resultPath = join(changeDir, '.superpowers', 'sdd', 'handoffs', handoff.id, 'RESULT.md');
-  writeFileSync(resultPath, [
+  const resultPath = join(changeDir, '.superpowers', 'sdd', 'handoffs', handoff.id, 'HANDOFF_RESULT.md');
+  writeFileSync(resultPath, validResult());
+  return finishHandoff(changeDir, handoff.id);
+}
+
+function validResult() {
+  return [
     '## Conclusion\nThe research is complete.',
     '## Evidence\nRepository evidence was reviewed.',
     '## Produced Artifacts\nThe handoff record was produced.',
     '## Risks\nNo additional risks were found.',
     '## Suggested Changes\nProceed with the selected approach.',
     '',
-  ].join('\n'));
-  return finishHandoff(changeDir, handoff.id);
+  ].join('\n');
 }

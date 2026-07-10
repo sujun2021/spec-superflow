@@ -56,7 +56,7 @@ describe('ssf handoff', () => {
     assert.match(handoff.source, /- Do not alter planning artifacts/);
     assert.match(handoff.source, /- Use only fixture data/);
 
-    writeFileSync(join(handoff.directory, 'RESULT.md'), validResult());
+    writeFileSync(join(handoff.directory, 'HANDOFF_RESULT.md'), validResult());
     assert.equal(runSsf(['handoff', 'finish', changeDir, handoff.id]).exitCode, 0);
     assert.equal(runSsf(['handoff', 'resolve', changeDir, handoff.id, '--decision', 'accept']).exitCode, 0);
     assert.deepEqual(readFileSync(join(changeDir, 'design.md')), designBefore);
@@ -74,7 +74,7 @@ describe('ssf handoff', () => {
 
   it('rejects a result without evidence and leaves the handoff active', () => {
     const handoff = createHandoff();
-    writeFileSync(join(handoff.directory, 'RESULT.md'), validResult().replace('Prototype screenshots and task notes.', ''));
+    writeFileSync(join(handoff.directory, 'HANDOFF_RESULT.md'), validResult().replace('Prototype screenshots and task notes.', ''));
 
     const result = runSsf(['handoff', 'finish', changeDir, handoff.id]);
     assert.equal(result.exitCode, 1);
@@ -98,7 +98,7 @@ describe('ssf handoff', () => {
 
   it('requires acknowledgement when source artifacts drift', () => {
     const handoff = createHandoff();
-    writeFileSync(join(handoff.directory, 'RESULT.md'), validResult());
+    writeFileSync(join(handoff.directory, 'HANDOFF_RESULT.md'), validResult());
     assert.equal(runSsf(['handoff', 'finish', changeDir, handoff.id]).exitCode, 0);
     writeFileSync(join(changeDir, 'proposal.md'), '# Proposal\n\nChanged after handoff creation.\n');
 

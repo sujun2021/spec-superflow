@@ -11,6 +11,7 @@ export const HANDOFF_DECISIONS = new Set(['accept', 'reject', 'defer']);
 export const RESULT_HEADINGS = [
   'Conclusion', 'Evidence', 'Produced Artifacts', 'Risks', 'Suggested Changes',
 ];
+const HANDOFF_RESULT_FILE = 'HANDOFF_RESULT.md';
 
 export function getOverlayPaths(changeDir) {
   const root = join(changeDir, '.superpowers', 'sdd');
@@ -92,7 +93,7 @@ export function createHandoff(changeDir, input) {
     `# Handoff: ${input.title}`,
     handoffBody(metadata),
   ));
-  atomicWrite(join(directory, 'RESULT.md'), renderResultTemplate());
+  atomicWrite(join(directory, HANDOFF_RESULT_FILE), renderResultTemplate());
   return readHandoff(directory);
 }
 
@@ -107,7 +108,7 @@ export function listHandoffs(changeDir) {
 export function finishHandoff(changeDir, id) {
   const handoff = getHandoff(changeDir, id);
   if (!handoff) throw new Error(`Handoff '${id}' was not found`);
-  const resultPath = join(handoff.directory, 'RESULT.md');
+  const resultPath = join(handoff.directory, HANDOFF_RESULT_FILE);
   const result = parseResult(readFileSync(resultPath, 'utf8'));
   for (const heading of RESULT_HEADINGS) {
     if (!result[heading]) throw new Error(`${heading} must contain non-empty content`);
