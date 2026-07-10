@@ -42,7 +42,26 @@ describe('ssf checkpoint', () => {
       '--review', 'review.md', '--risk', 'None', '--commit-start', 'aaaaaaa', '--commit-end', 'bbbbbbb',
     ]);
     assert.equal(result.exitCode, 0, result.stderr);
-    assert.match(runSsf(['checkpoint', 'show', changeDir, '1.1']).stdout, /Run focused tests/);
+    const show = runSsf(['checkpoint', 'show', changeDir, '1.1', '--json']);
+    assert.equal(show.exitCode, 0, show.stderr);
+    const shown = JSON.parse(show.stdout).checkpoint;
+    assert.equal(shown.next, 'Run focused tests');
+    assert.equal(shown.completed, 'Added parser tests');
+    assert.equal(shown.evidence, 'tests/lib/sdd-overlay.test.mjs');
+    assert.equal(shown.review, 'review.md');
+    assert.equal(shown.risk, 'None');
+    assert.equal(shown.commit_start, 'aaaaaaa');
+    assert.equal(shown.commit_end, 'bbbbbbb');
+
+    const listed = runSsf(['checkpoint', 'list', changeDir, '--json']);
+    assert.equal(listed.exitCode, 0, listed.stderr);
+    const listedCheckpoint = JSON.parse(listed.stdout).checkpoints[0];
+    assert.equal(listedCheckpoint.completed, 'Added parser tests');
+    assert.equal(listedCheckpoint.evidence, 'tests/lib/sdd-overlay.test.mjs');
+    assert.equal(listedCheckpoint.review, 'review.md');
+    assert.equal(listedCheckpoint.risk, 'None');
+    assert.equal(listedCheckpoint.commit_start, 'aaaaaaa');
+    assert.equal(listedCheckpoint.commit_end, 'bbbbbbb');
   });
 
   it('rejects save without --next before creating a checkpoint file', () => {

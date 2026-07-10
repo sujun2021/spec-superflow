@@ -30,6 +30,29 @@ afterEach(() => {
 });
 
 describe('checkpoint storage', () => {
+  it('persists commit boundaries and recovery fields across list and show reads', () => {
+    saveCheckpoint(changeDir, {
+      taskId: '1.1',
+      next: 'Run the focused test',
+      completed: 'Added parser tests',
+      evidence: 'tests/lib/sdd-overlay.test.mjs',
+      review: 'review.md',
+      risk: 'None',
+      commitStart: 'aaaaaaa',
+      commitEnd: 'bbbbbbb',
+    });
+
+    const checkpoint = listCheckpoints(changeDir)[0];
+    assert.equal(checkpoint.task_id, '1.1');
+    assert.equal(checkpoint.next, 'Run the focused test');
+    assert.equal(checkpoint.completed, 'Added parser tests');
+    assert.equal(checkpoint.evidence, 'tests/lib/sdd-overlay.test.mjs');
+    assert.equal(checkpoint.review, 'review.md');
+    assert.equal(checkpoint.risk, 'None');
+    assert.equal(checkpoint.commit_start, 'aaaaaaa');
+    assert.equal(checkpoint.commit_end, 'bbbbbbb');
+  });
+
   it('marks a checkpoint stale when its numbered task line changes', () => {
     saveCheckpoint(changeDir, { taskId: '1.1', next: 'Run the focused test' });
     writeFileSync(join(changeDir, 'tasks.md'), '# Tasks\n\n- [ ] 1.1 Changed task text\n');

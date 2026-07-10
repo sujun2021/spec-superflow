@@ -38,8 +38,8 @@ export async function run(args) {
       evidence: values.verification,
       review: values.review,
       risk: values.risk,
-      'commit-start': values['commit-start'],
-      'commit-end': values['commit-end'],
+      commitStart: values['commit-start'],
+      commitEnd: values['commit-end'],
     });
     if (values.json) {
       console.log(JSON.stringify({ ok: true, checkpoint }));
@@ -108,5 +108,11 @@ function renderCheckpoint(checkpoint) {
     '',
     '## Risk',
     checkpoint.risk,
+    '',
+    '## Commit Start',
+    checkpoint.commit_start,
+    '',
+    '## Commit End',
+    checkpoint.commit_end,
   ].join('\n');
 }

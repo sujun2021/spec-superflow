@@ -42,6 +42,8 @@ export function saveCheckpoint(changeDir, input) {
     evidence: input.evidence ?? 'Not recorded',
     review: input.review ?? 'Not recorded',
     risk: input.risk ?? 'Not recorded',
+    commit_start: input.commitStart ?? 'Not recorded',
+    commit_end: input.commitEnd ?? 'Not recorded',
     created_at: new Date().toISOString(),
   };
   const targetPath = join(paths.checkpoints, `${safeName(input.taskId)}.md`);
@@ -152,6 +154,8 @@ function checkpointBody(record) {
     `## Evidence\n${record.evidence}`,
     `## Review\n${record.review}`,
     `## Risk\n${record.risk}`,
+    `## Commit Start\n${record.commit_start}`,
+    `## Commit End\n${record.commit_end}`,
   ].join('\n\n');
 }
 
@@ -169,6 +173,8 @@ function renderResultTemplate() {
 
 function readCheckpoint(filePath) {
   const { metadata } = parseRecord(readFileSync(filePath, 'utf8'));
+  metadata.commit_start ??= 'Not recorded';
+  metadata.commit_end ??= 'Not recorded';
   let currentHash;
   try {
     currentHash = computeTaskHash(dirname(dirname(dirname(dirname(filePath)))), metadata.task_id);
