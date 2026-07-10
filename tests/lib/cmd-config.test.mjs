@@ -49,7 +49,9 @@ describe('ssf config --resolve-model', () => {
 
   it('prints a valid unmapped result and rejects invalid requests', () => {
     writeConfig({ models: {} });
-    assert.deepStrictEqual(JSON.parse(runSsf(['config', '--resolve-model', 'review']).stdout), {
+    const unmapped = runSsf(['config', '--resolve-model', 'review']);
+    assert.equal(unmapped.exitCode, 0, unmapped.stderr);
+    assert.deepStrictEqual(JSON.parse(unmapped.stdout), {
       profile: 'review', model: null, configured: false,
     });
     assert.equal(runSsf(['config', '--resolve-model']).exitCode, 2);
