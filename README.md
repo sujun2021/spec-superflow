@@ -125,7 +125,7 @@ npx spec-superflow list          # 或通过 npx 使用
 | `ssf doctor` | 健康检查（版本、hooks、skills、文档一致性） |
 | `ssf version <semver>` | 一键同步版本号到所有 manifest |
 | `ssf state <sub> <dir>` | 管理 `.spec-superflow.yaml` 状态文件 |
-| `ssf inject <dir>` | 生成多平台 phase-guard 产物 |
+| `ssf inject <dir>` | 生成 phase-guard 产物；仅在检测到单一平台标记时可省略 `--platforms` |
 | `ssf audit <dir>` | 生成决策点审计报告 |
 | `ssf install-cursor` | 部署到 Cursor `.cursor/` 目录 |
 | `ssf install-workbuddy` | 部署到 WorkBuddy marketplace 插件（含 skills/rules/runtime） |
@@ -140,10 +140,21 @@ npx spec-superflow list          # 或通过 npx 使用
 
 ### 版本
 
-- 当前版本：`v0.8.16`
+- 当前版本：`v0.8.17`
 - 自包含插件，不需要运行时安装 OpenSpec 或 Superpowers
 - 上游来源：[Fission-AI/OpenSpec](https://github.com/Fission-AI/OpenSpec) 和 [obra/superpowers](https://github.com/obra/superpowers)
 - 版本历史见 [CHANGELOG.md](CHANGELOG.md)
+
+`ssf inject` 示例：
+
+```bash
+ssf inject changes/my-change --platforms cursor
+ssf inject changes/my-change --platforms all
+```
+
+省略 `--platforms` 时，只有在项目中**恰好检测到一个**平台标记时才会自动写入；如果检测到多个平台，必须显式指定 `--platforms <platform>` 或 `--platforms all`。
+
+Delta spec 的规范路径是 `specs/<capability>/spec.md`；扁平的 `specs/<capability>.md` 和根级 `specs/spec.md` 不会被视为合法规范。
 
 ---
 
@@ -172,7 +183,7 @@ npx spec-superflow list          # 或通过 npx 使用
 
 **❌ 不推荐：** 一次性脚本/工具、纯咨询/问答。
 
-> **v0.6.0 起自动模式检测**：hotfix（≤2 文件，自动跳过规划）和 tweak（≤4 文件，纯配置/文档，直接编辑）让小型变更也能高效使用。
+> **v0.6.0 起自动模式检测**：hotfix（≤2 文件，最小契约 + DP-3 后执行）和 tweak（≤4 文件，纯配置/文档，直接编辑）让小型变更也能高效使用。
 
 ---
 
@@ -223,7 +234,7 @@ npx spec-superflow list          # 或通过 npx 使用
 
 ### 快速路径（hotfix / tweak）
 
-- **hotfix** — ≤2 文件、无新模块时，跳过完整 spec-writer，走最小契约 → inline 执行
+- **hotfix** — ≤2 文件、无新模块时，走 `exploring -> bridging -> approved-for-build -> executing`。可跳过 `proposal.md`、`design.md`、`tasks.md`、`specs/` 等完整规划工件，但仍必须先生成一份新的最小 `execution-contract.md`，并完成 DP-3 批准后才能进入实现
 - **tweak** — ≤4 文件、纯配置/文档修改时，跳过规划+桥接，直接编辑
 
 ---

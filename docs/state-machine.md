@@ -24,6 +24,7 @@
 - ambiguity is compressed into explicit approved decisions
 - `contract-builder` is active
 - parsing engine auto-extracts intent/scope/test-obligations/constraints/batches
+- hotfix also passes through this state with a fresh minimal contract and DP-3 approval before build
 
 ### `approved-for-build`
 
@@ -68,7 +69,8 @@
 ## Transitions
 
 ```text
-  exploring ──── hotfix/tweak ────> bridging          (fast-path)
+  exploring ──── hotfix ─────────> bridging          (fast-path)
+  bridging  ──── hotfix ─────────> approved-for-build
   exploring ──── tweak ──────────> approved-for-build (fast-path)
 
   exploring -> specifying -> bridging -> approved-for-build -> executing -> closing
@@ -109,3 +111,10 @@ During `executing`, if a bug, test failure, or unexpected behavior blocks progre
 Do not stay in `executing` and "just adjust things in chat" when scope or behavior changes.
 
 If the contract changed, the artifacts changed.
+
+## Fast-Path Notes
+
+- `hotfix` follows `exploring -> bridging -> approved-for-build -> executing`.
+- `hotfix` may skip full planning artifacts such as `proposal.md`, `design.md`, `tasks.md`, and `specs/`.
+- `hotfix` still requires a fresh minimal `execution-contract.md` and explicit DP-3 approval before implementation.
+- `tweak` remains the only path that can jump directly from `exploring` to `approved-for-build`.

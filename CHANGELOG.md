@@ -4,6 +4,14 @@ All notable changes to `spec-superflow` will be documented in this file.
 
 The format loosely follows Keep a Changelog.
 
+## [0.8.17] - 2026-07-10
+
+### Fixed
+
+- Fixed canonical delta spec paths: validation, guard checks, hashing, sync, examples, and docs now use `specs/<capability>/spec.md`.
+- Fixed `ssf inject` default behavior so ambiguous projects require `--platforms` instead of writing every platform file.
+- Fixed hotfix fast-path guards so hotfix can skip full planning artifacts while still requiring a fresh minimal contract and DP-3 approval.
+
 ## [0.8.16] - 2026-07-07
 
 ### Fixed

@@ -7,7 +7,7 @@
 - [Fission-AI/OpenSpec](https://github.com/Fission-AI/OpenSpec) — 规划引擎（Schema 验证、Delta Spec、工件解析）
 - [obra/superpowers](https://github.com/obra/superpowers) — 执行纪律（TDD 铁律、SDD、系统化调试、代码审查）
 
-当前发布版本：**v0.8.16**。
+当前发布版本：**v0.8.17**。
 
 ---
 
@@ -660,13 +660,25 @@ changes/<change-name>/
 ├── design.md
 ├── tasks.md
 ├── specs/
-│   └── <capability>.md
+│   └── <capability>/
+│       └── spec.md
 └── execution-contract.md
 ```
 
 流程线：`proposal/specs/design/tasks -> execution-contract.md -> 用户批准 -> 开始实现`
 
 规划本身不等于可以实现。如果 `execution-contract.md` 缺失、过时或未被用户批准，工作流会拒绝进入实现阶段。
+
+Delta spec 的规范路径是 `specs/<capability>/spec.md`。扁平的 `specs/<capability>.md` 和根级 `specs/spec.md` 都不会被当作合法规范静默通过。
+
+### `ssf inject` 用法
+
+```bash
+ssf inject changes/my-change --platforms cursor
+ssf inject changes/my-change --platforms all
+```
+
+省略 `--platforms` 时，只有在项目里**恰好检测到一个**平台标记时才会自动注入；如果检测到多个平台，必须显式传 `--platforms <platform>` 或 `--platforms all`。
 
 ## 验证
 
@@ -687,3 +699,5 @@ changes/<change-name>/
 从 `workflow-start` 入口开始，不要直接调用 `build-executor`。
 
 推荐流程：`exploring -> specifying -> bridging -> approved-for-build -> executing -> closing`
+
+hotfix 快速路径：`exploring -> bridging -> approved-for-build -> executing`。hotfix 可以跳过完整的 `proposal.md`、`design.md`、`tasks.md`、`specs/`，但仍然必须先生成一份新的最小 `execution-contract.md`，并完成 DP-3 批准后才能开始实现。

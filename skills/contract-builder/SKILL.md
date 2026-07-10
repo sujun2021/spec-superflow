@@ -59,6 +59,8 @@ Generate minimal contract: Intent Lock (one sentence), Task List (numbered), App
 
 Run `node "${CLAUDE_PLUGIN_ROOT}/scripts/spec-superflow.mjs" state init <change-dir>` to create `.spec-superflow.yaml` with hashes.
 
+For hotfix, after writing the minimal contract, run `node "${CLAUDE_PLUGIN_ROOT}/scripts/spec-superflow.mjs" state init <change-dir>` or `node "${CLAUDE_PLUGIN_ROOT}/scripts/spec-superflow.mjs" state rebuild <change-dir>` so `contract_hash` is recorded. DP-3 remains mandatory before build.
+
 ## Exception Handling
 
 - **Parse failures**: Report specific file and section. Suggest re-running `spec-writer`.

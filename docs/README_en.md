@@ -112,17 +112,28 @@ npm install -g spec-superflow
 | `ssf doctor` | Health check (versions, hooks, skills, docs) |
 | `ssf version <semver>` | Sync version across all manifests |
 | `ssf state <sub> <dir>` | Manage `.spec-superflow.yaml` state file |
-| `ssf inject <dir>` | Generate multi-platform phase-guard artifacts |
+| `ssf inject <dir>` | Generate phase-guard artifacts; omit `--platforms` only when exactly one platform marker is detected |
 | `ssf audit <dir>` | Generate decision-point audit report |
 | `ssf install-cursor` | Deploy to `.cursor/` directory |
 | `ssf install-workbuddy` | Deploy to WorkBuddy marketplace and enable skills |
 
 ### Version
 
-- Current: `v0.8.16`
+- Current: `v0.8.17`
 - Self-contained — no OpenSpec or Superpowers runtime required
 - Upstream: [Fission-AI/OpenSpec](https://github.com/Fission-AI/OpenSpec), [obra/superpowers](https://github.com/obra/superpowers)
 - Changelog: [CHANGELOG.md](../CHANGELOG.md)
+
+`ssf inject` examples:
+
+```bash
+ssf inject changes/my-change --platforms cursor
+ssf inject changes/my-change --platforms all
+```
+
+If `--platforms` is omitted, injection only proceeds when exactly one project marker is detected. Ambiguous projects must use `--platforms <platform>` or `--platforms all`.
+
+Canonical delta specs live at `specs/<capability>/spec.md`; flat `specs/<capability>.md` and root-level `specs/spec.md` are not valid canonical paths.
 
 ---
 
@@ -151,7 +162,7 @@ AI coding sessions fail in one of two ways:
 
 **❌ Skip:** One-off scripts, pure Q&A conversations.
 
-> **v0.6.0+ auto mode detection:** hotfix (≤2 files, skips planning) and tweak (≤4 files, config/docs only, skips planning + bridging) make lightweight changes efficient too.
+> **v0.6.0+ auto mode detection:** hotfix (≤2 files, minimal contract + DP-3 before execution) and tweak (≤4 files, config/docs only, skips planning + bridging) make lightweight changes efficient too.
 
 ---
 
@@ -202,7 +213,7 @@ You: "add authorization to the API"
 
 ### Fast Paths (hotfix / tweak)
 
-- **hotfix** — ≤2 files, no new modules → minimal contract → inline execution
+- **hotfix** — ≤2 files, no new modules → `exploring -> bridging -> approved-for-build -> executing`. It may skip full planning artifacts such as `proposal.md`, `design.md`, `tasks.md`, and `specs/`, but it still requires a fresh minimal `execution-contract.md` plus DP-3 approval before implementation
 - **tweak** — ≤4 files, config/docs only → skip planning + bridging, direct edit
 
 ---

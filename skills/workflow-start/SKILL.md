@@ -74,7 +74,7 @@ Delta specs exist that need merging, change closing with ADDED/MODIFIED/REMOVED/
 User explicitly requests, bug-investigator escalates after 3+ failures AND user chooses, scope change makes change no longer worthwhile AND user confirms. Block from `closing` or `abandoned`.
 
 ### Fast-Path Routing
-- **Hotfix**: Route to contract-builder (minimal), skip need-explorer + spec-writer, guard check `exploring bridging --workflow hotfix`, after DP-3 → build-executor (inline), after → release-archivist (lightweight)
+- **Hotfix**: Route to contract-builder (minimal), skip need-explorer + spec-writer, guard check `exploring bridging --workflow hotfix`, then `bridging -> approved-for-build`, after DP-3 → build-executor (inline), after → release-archivist (lightweight). Hotfix may skip `proposal.md`, `design.md`, `tasks.md`, and `specs/`, but it still requires a fresh minimal `execution-contract.md` and DP-3 approval before build
 - **Tweak**: Route to build-executor (direct edit), skip need-explorer + spec-writer + contract-builder, guard check `exploring approved-for-build --workflow tweak`, after → release-archivist (lightweight)
 
 Post-transition: 💡 `node "${CLAUDE_PLUGIN_ROOT}/scripts/spec-superflow.mjs" inject <change-dir>` to update phase-guard artifacts.
