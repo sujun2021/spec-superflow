@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 import {
@@ -112,6 +112,40 @@ describe('execution plan data contract', () => {
     assert.ok(result.failures.includes('execution plan is stale: artifacts hash mismatch'));
   });
 
+  it('marks a plan stale after its frozen contract changes', () => {
+    const plan = createPlan(changeDir, {
+      mode: 'sdd', source: 'default', rationale: 'freeze current contract',
+      waves: [{ id: 'wave-1', strategy: 'serial', tasks: ['1.1'], depends_on: [] }],
+    });
+    writePlan(changeDir, plan);
+    writeFileSync(join(changeDir, 'execution-contract.md'), '# Execution Contract\n\nChanged contract.\n');
+
+    const result = validatePlan(changeDir, readPlan(changeDir));
+
+    assert.equal(result.valid, false);
+    assert.ok(result.failures.includes('execution plan is stale: contract hash mismatch'));
+  });
+
+  it('marks a plan stale when the state revision changes', () => {
+    const plan = createPlan(changeDir, {
+      mode: 'sdd', source: 'default', rationale: 'freeze current revision',
+      waves: [{ id: 'wave-1', strategy: 'serial', tasks: ['1.1'], depends_on: [] }],
+    });
+    writePlan(changeDir, plan);
+    writeFileSync(join(changeDir, '.spec-superflow.yaml'), [
+      'state: approved-for-build',
+      'workflow: full',
+      'revision: 3',
+      `execution_plan_hash: ${plan.hash}`,
+      '',
+    ].join('\n'));
+
+    const result = validatePlan(changeDir, readPlan(changeDir));
+
+    assert.equal(result.valid, false);
+    assert.ok(result.failures.includes('execution plan revision does not match state'));
+  });
+
   it('records review receipts only for known waves', () => {
     const plan = createPlan(changeDir, {
       mode: 'sdd', source: 'default', rationale: 'review gate',
@@ -125,9 +159,11 @@ describe('execution plan data contract', () => {
 
     assert.equal(receipt.status, 'pass');
     assert.ok(receipt.recorded_at);
-    assert.equal(existsSync(join(changeDir, '.superpowers', 'sdd', 'reviews', 'wave-1.json')), true);
+    const reviewsDir = join(changeDir, '.superpowers', 'sdd', 'reviews');
+    const receiptFiles = readdirSync(reviewsDir);
+    assert.equal(receiptFiles.length, 1);
     assert.deepEqual(
-      JSON.parse(readFileSync(join(changeDir, '.superpowers', 'sdd', 'reviews', 'wave-1.json'), 'utf8')),
+      JSON.parse(readFileSync(join(reviewsDir, receiptFiles[0]), 'utf8')),
       receipt,
     );
     assert.throws(
@@ -136,6 +172,32 @@ describe('execution plan data contract', () => {
       }),
       /unknown wave/,
     );
+  });
+
+  it('persists receipts independently for wave IDs with encoded-name collisions', () => {
+    const plan = createPlan(changeDir, {
+      mode: 'sdd', source: 'default', rationale: 'review receipt naming',
+      waves: [
+        { id: 'a%', strategy: 'serial', tasks: ['1.1'], depends_on: [] },
+        { id: 'a_25', strategy: 'serial', tasks: ['1.2'], depends_on: ['a%'] },
+      ],
+    });
+    writePlan(changeDir, plan);
+
+    recordReview(changeDir, 'a%', {
+      status: 'pass', base: 'base-percent', head: 'head-percent', report: 'Percent wave passed.',
+    });
+    recordReview(changeDir, 'a_25', {
+      status: 'fail', base: 'base-underscore', head: 'head-underscore', report: 'Underscore wave failed.',
+    });
+
+    const reviewsDir = join(changeDir, '.superpowers', 'sdd', 'reviews');
+    const receipts = readdirSync(reviewsDir)
+      .sort()
+      .map(fileName => JSON.parse(readFileSync(join(reviewsDir, fileName), 'utf8')));
+    assert.equal(receipts.length, 2);
+    assert.ok(receipts.some(receipt => receipt.report === 'Percent wave passed.'));
+    assert.ok(receipts.some(receipt => receipt.report === 'Underscore wave failed.'));
   });
 
   it('returns validation failures instead of throwing for malformed plans', () => {

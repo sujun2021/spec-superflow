@@ -71,6 +71,9 @@ export function validatePlan(changeDir, plan) {
   if (plan?.workflow !== state.workflow) {
     failures.push('execution plan workflow does not match state');
   }
+  if (state.revision != null && plan?.revision !== state.revision) {
+    failures.push('execution plan revision does not match state');
+  }
   return { valid: failures.length === 0, failures, plan };
 }
 
@@ -225,5 +228,5 @@ function requireText(value, field) {
 }
 
 function safeFileName(value) {
-  return encodeURIComponent(value).replace(/%/g, '_');
+  return Buffer.from(value, 'utf8').toString('base64url');
 }
