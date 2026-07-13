@@ -7,6 +7,36 @@ const root = process.cwd();
 const read = path => readFileSync(join(root, path), 'utf8');
 
 describe('execution control plane instructions', () => {
+  it('documents #45 guarded execution without claiming #47 slash commands', () => {
+    const documents = [
+      'README.md',
+      'docs/README_en.md',
+      'INSTALL.md',
+      'templates/execution-contract.md',
+      'docs/state-machine.md',
+      'docs/artifact-contract.md',
+    ];
+
+    for (const path of documents) {
+      const content = read(path);
+      assert.match(content, /execution[ -]plan/i, `${path} documents execution plans`);
+      assert.match(content, /SDD.*default|default.*SDD/is, `${path} documents the SDD default`);
+      assert.match(content, /explicit.*override|override.*explicit/is, `${path} documents explicit overrides`);
+      assert.match(content, /review receipt/i, `${path} documents review receipts`);
+    }
+
+    assert.match(read('templates/execution-contract.md'), /Execution Waves/);
+    assert.match(read('CHANGELOG.md'), /#45/);
+    assert.doesNotMatch(read('README.md'), /\/ssf:resume/);
+    assert.doesNotMatch(read('docs/README_en.md'), /\/ssf:resume/);
+    assert.doesNotMatch(read('INSTALL.md'), /\/ssf:resume/);
+
+    for (const path of documents) {
+      assert.doesNotMatch(read(path), /automatic(?:ally)?\s+(?:defaults?\s+to\s+)?Batch Inline/i,
+        `${path} does not advertise automatic Batch Inline`);
+    }
+  });
+
   it('keeps execution mode and review gates machine-backed in every entry point', () => {
     const workflowStart = read('skills/workflow-start/SKILL.md');
     const buildExecutor = read('skills/build-executor/SKILL.md');

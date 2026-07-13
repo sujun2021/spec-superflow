@@ -230,6 +230,28 @@ You: "add authorization to the API"
 
 **Hard constraints:** No `execution-contract.md` or no approval → implementation blocked. Requirements change mid-execution → forced rollback. Bug encountered → must enter debugging state, no ad-hoc fixes.
 
+### Guarded execution plans
+
+For full/hotfix, DP-4 is a persisted, current execution plan rather than an
+arbitrary text field. SDD is the default. `inline` and `batch-inline` require
+an explicit user override; Batch Inline remains serial and is never an
+automatic default or a claim of parallel work. `tweak` is exempt from this
+execution-plan and review-receipt gate.
+
+```bash
+ssf execution plan changes/my-change --mode sdd --reason "independent work" \
+  --wave foundation:parallel:1.1,1.2 \
+  --wave integration:serial:2.1:foundation
+ssf execution show changes/my-change --json
+ssf execution review changes/my-change --wave foundation --base <sha> --head <sha> \
+  --report .superpowers/sdd/reviews/foundation.md --verdict pass
+```
+
+Every planned wave needs a current `pass` review receipt before dependent
+waves or closing may proceed; revising a plan invalidates earlier receipts.
+The recovery, switching, and manual-save slash commands proposed in #47 are
+not implemented, so this documentation does not claim `/ssf:*` commands.
+
 ### Fast Paths (hotfix / tweak)
 
 - **hotfix** — ≤2 files, no new modules → `exploring -> bridging -> approved-for-build -> executing`. It may skip full planning artifacts such as `proposal.md`, `design.md`, `tasks.md`, and `specs/`, but it still requires a fresh minimal `execution-contract.md` plus DP-3 approval before implementation
@@ -295,7 +317,11 @@ Content-level detection, not timestamps: proposal scope changed, approved spec b
 <details>
 <summary><strong>How does SDD (Subagent-Driven Development) work?</strong></summary>
 
-Per-task loop: dispatch implementer subagent → generate review diff → dispatch reviewer subagent → dual verdict (spec compliance + code quality) → fail → fix → re-review. Progress ledger prevents session-compression loss.
+For full/hotfix, the default SDD loop persists an execution plan with named
+waves, dependencies, and write-conflict checks before dispatching implementers.
+Each wave gets a review report and a `pass`/`fail` review receipt. Inline and
+Batch Inline require an explicit user override; Batch Inline remains serial.
+The progress ledger prevents session-compression loss.
 
 </details>
 

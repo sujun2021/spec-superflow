@@ -143,6 +143,10 @@ npx spec-superflow list          # 或通过 npx 使用
 | `ssf handoff list <dir>` | 列出 handoff 生命周期状态 |
 | `ssf handoff finish <dir> <id>` | 校验 handoff 结果 |
 | `ssf handoff resolve <dir> <id> --decision <decision>` | 记录显式 handoff 决策 |
+| `ssf execution plan <dir> ...` | 为 full/hotfix 记录受 guard 保护的执行计划（SDD 默认） |
+| `ssf execution show <dir> [--json]` | 查看并校验当前执行计划、wave 与 receipt |
+| `ssf execution revise <dir> ...` | 修订执行计划并生成新 revision |
+| `ssf execution review <dir> ...` | 为一个计划 wave 记录 review receipt |
 | `ssf install-cursor` | 部署到 Cursor `.cursor/` 目录 |
 | `ssf install-workbuddy` | 部署到 WorkBuddy marketplace 插件（含 skills/rules/runtime） |
 | `ssf install-cline` | 部署到 Cline `.cline/` + `.clinerules/` |
@@ -182,6 +186,27 @@ ssf handoff create changes/my-change --type research --objective "Compare approa
 Prototype 只在用户明确确认后创建；后端、CLI、配置和内部重构不会自动进入 prototype 流程。handoff 结果不会自动修改 `design.md` 或 `tasks.md`。
 
 Delta spec 的规范路径是 `specs/<capability>/spec.md`；扁平的 `specs/<capability>.md` 和根级 `specs/spec.md` 不会被视为合法规范。
+
+### 受 guard 保护的执行计划
+
+对 full/hotfix，DP-4 不是一段任意文本：开始实现前必须保存并校验 current
+execution plan。SDD 是 default；只有用户给出 explicit override 时，才能选择
+`inline` 或 `batch-inline`。后者始终是串行模式，绝不自动成为默认或冒充并行。
+`tweak` 保持轻量例外，不要求 execution plan 或 wave receipt。
+
+```bash
+ssf execution plan changes/my-change --mode sdd --reason "independent work" \
+  --wave foundation:parallel:1.1,1.2 \
+  --wave integration:serial:2.1:foundation
+ssf execution show changes/my-change --json
+# 每个 wave 都先写入非空 review report，再记录 receipt。
+ssf execution review changes/my-change --wave foundation --base <sha> --head <sha> \
+  --report .superpowers/sdd/reviews/foundation.md --verdict pass
+```
+
+每个 wave 的 review receipt 必须是当前 revision 的 `pass`，依赖 wave 和 closing
+才会放行；修订计划会使旧 receipt 失效。恢复、切换和手动保存等 #47 的 slash
+command 尚未实现，不能据此假定存在 `/ssf:*` 命令。
 
 ---
 
@@ -257,7 +282,7 @@ Delta spec 的规范路径是 `specs/<capability>/spec.md`；扁平的 `specs/<c
    syncing            spec-merger（delta spec → 主规范）
 ```
 
-**关键约束：** 没有 `execution-contract.md` 或未被批准 → 不允许实现；需求变更 → 强制回退；遇到 bug → 强制走 debugging，不允许"随便试试"。
+**关键约束：** 没有 `execution-contract.md` 或未被批准 → 不允许实现；full/hotfix 没有 current execution plan、或任一 wave 缺少 `pass` review receipt → 不允许推进；需求变更 → 强制回退；遇到 bug → 强制走 debugging，不允许"随便试试"。
 
 ### 快速路径（hotfix / tweak）
 
@@ -324,7 +349,7 @@ ssf config --resolve-model mechanical
 <details>
 <summary><strong>SDD (Subagent-Driven Development) 怎么工作的？</strong></summary>
 
-每任务循环：派实施子代理 → 生成 review diff → 派审查子代理 → 双向判断（spec 合规 + 代码质量）→ 不合格 → 修复 → 重新审查。进度台账防止会话压缩后丢失进度。
+full/hotfix 默认 SDD：先保存带依赖与写入冲突检查的 execution plan，再按可执行 wave 派实施子代理；每个 wave 先有 review report，再写 `pass`/`fail` review receipt。只有用户 explicit override 才能选择 inline 或 Batch Inline；Batch Inline 仍是串行。进度台账防止会话压缩后丢失进度。
 
 </details>
 
