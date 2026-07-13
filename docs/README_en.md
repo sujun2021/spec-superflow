@@ -253,6 +253,10 @@ ssf execution review changes/my-change --wave foundation --base <sha> --head <sh
   --report .superpowers/sdd/reviews/foundation.md --verdict pass
 ```
 
+The `--report` path is resolved relative to `<change>` and must remain under
+`<change>/.superpowers/sdd/reviews/`. `--base` and `--head` must be real commits
+in the `<change>` Git worktree, and `base` must be an ancestor of `head`.
+
 Every planned wave needs a current `pass` review receipt before dependent
 waves or closing may proceed; revising a plan invalidates earlier receipts.
 The recovery, switching, and manual-save slash commands proposed in #47 are

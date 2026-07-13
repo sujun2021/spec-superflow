@@ -705,6 +705,10 @@ ssf execution review changes/my-change --wave foundation --base <sha> --head <sh
   --report .superpowers/sdd/reviews/foundation.md --verdict pass
 ```
 
+`--report` 相对于 `<change>` 解析，且必须位于
+`<change>/.superpowers/sdd/reviews/` 之下。`--base` 和 `--head` 必须是该
+`<change>` Git 工作树中的真实 commit，且 `base` 必须是 `head` 的祖先。
+
 每一个 wave 均须有当前 `pass` review receipt，才可启动依赖 wave 或进入 closing；
 修订计划会废止旧 receipt。#47 所提出的恢复、切换与手动保存 slash command 尚未实现，
 不能假定有 `/ssf:*` 命令。
