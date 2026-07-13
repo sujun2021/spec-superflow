@@ -1,16 +1,21 @@
 import { afterEach, beforeEach, describe, it } from 'node:test';
 import assert from 'node:assert/strict';
 import { execFileSync } from 'node:child_process';
-import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdtempSync, mkdirSync, readFileSync, rmSync, symlinkSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 const CLI = join(process.cwd(), 'scripts/spec-superflow.mjs');
 let changeDir;
+let gitRefs;
 
-function runSsf(args) {
+function runSsf(args, cwd = process.cwd()) {
   try {
-    const stdout = execFileSync(process.execPath, [CLI, ...args], { encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+    const stdout = execFileSync(process.execPath, [CLI, ...args], {
+      cwd,
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
     return { exitCode: 0, stdout, stderr: '', json: tryJson(stdout) };
   } catch (error) {
     return {
@@ -20,6 +25,10 @@ function runSsf(args) {
       json: tryJson(error.stdout?.toString() ?? ''),
     };
   }
+}
+
+function runGit(directory, args) {
+  return execFileSync('git', args, { cwd: directory, encoding: 'utf8' }).trim();
 }
 
 function tryJson(text) {
@@ -42,16 +51,33 @@ function writeChangeDirectory(directory, workflow = 'full', revision = null) {
 }
 
 function writeReviewReport(name, content = 'Review completed without blocking findings.\n') {
-  const reportsDir = join(changeDir, 'reports');
+  const reportsDir = join(changeDir, '.superpowers', 'sdd', 'reviews');
   mkdirSync(reportsDir, { recursive: true });
   const reportPath = join(reportsDir, name);
   writeFileSync(reportPath, content);
   return reportPath;
 }
 
+function initializeGitRepository(directory) {
+  runGit(directory, ['init', '--quiet']);
+  runGit(directory, ['config', 'user.email', 'tests@example.invalid']);
+  runGit(directory, ['config', 'user.name', 'Execution Test']);
+  runGit(directory, ['add', '--all']);
+  runGit(directory, ['commit', '--quiet', '--message', 'initial execution change']);
+  const base = runGit(directory, ['rev-parse', 'HEAD']);
+
+  writeFileSync(join(directory, 'git-range-marker.txt'), 'second commit\n');
+  runGit(directory, ['add', 'git-range-marker.txt']);
+  runGit(directory, ['commit', '--quiet', '--message', 'second execution change']);
+  const head = runGit(directory, ['rev-parse', 'HEAD']);
+  const divergent = runGit(directory, ['commit-tree', `${head}^{tree}`, '-m', 'independent execution change']);
+  return { base, head, divergent };
+}
+
 beforeEach(() => {
   changeDir = mkdtempSync(join(tmpdir(), 'ssf-execution-cmd-'));
   writeChangeDirectory(changeDir);
+  gitRefs = initializeGitRepository(changeDir);
 });
 
 afterEach(() => {
@@ -118,12 +144,159 @@ describe('ssf execution', () => {
     }]);
   });
 
+  it('keeps an overlay-relative review report current across working directories', () => {
+    const planned = runSsf(['execution', 'plan', changeDir, '--mode', 'sdd', '--reason', 'full workflow default',
+      '--wave', 'wave-1:serial:1.1']);
+    assert.equal(planned.exitCode, 0, planned.stderr);
+    writeReviewReport('wave-1.md');
+    const reviewCwd = mkdtempSync(join(tmpdir(), 'ssf-review-cwd-'));
+    const showCwd = mkdtempSync(join(tmpdir(), 'ssf-show-cwd-'));
+
+    try {
+      const reviewed = runSsf(['execution', 'review', changeDir, '--wave', 'wave-1',
+        '--base', gitRefs.base, '--head', gitRefs.head,
+        '--report', '.superpowers/sdd/reviews/wave-1.md', '--verdict', 'pass'], reviewCwd);
+      assert.equal(reviewed.exitCode, 0, reviewed.stderr);
+
+      const shown = runSsf(['execution', 'show', changeDir, '--json'], showCwd);
+      assert.equal(shown.exitCode, 0, shown.stderr);
+      assert.equal(shown.json.current, true);
+      assert.equal(shown.json.waves[0].receipt.status, 'pass');
+    } finally {
+      rmSync(reviewCwd, { recursive: true, force: true });
+      rmSync(showCwd, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects review reports outside the change overlay', () => {
+    const planned = runSsf(['execution', 'plan', changeDir, '--mode', 'sdd', '--reason', 'full workflow default',
+      '--wave', 'wave-1:serial:1.1']);
+    assert.equal(planned.exitCode, 0, planned.stderr);
+    const outsideReport = join(changeDir, 'reports', 'wave-1.md');
+    mkdirSync(join(changeDir, 'reports'), { recursive: true });
+    writeFileSync(outsideReport, 'Review completed without blocking findings.\n');
+
+    const reviewed = runSsf(['execution', 'review', changeDir, '--wave', 'wave-1',
+      '--base', gitRefs.base, '--head', gitRefs.head, '--report', outsideReport, '--verdict', 'pass']);
+
+    assert.notEqual(reviewed.exitCode, 0);
+    assert.match(reviewed.stderr, /overlay|review/i);
+  });
+
+  it('rejects a report reached through a nested review-directory symlink', () => {
+    const planned = runSsf(['execution', 'plan', changeDir, '--mode', 'sdd', '--reason', 'full workflow default',
+      '--wave', 'wave-1:serial:1.1']);
+    assert.equal(planned.exitCode, 0, planned.stderr);
+    const outsideDir = join(changeDir, 'reports');
+    mkdirSync(outsideDir, { recursive: true });
+    writeFileSync(join(outsideDir, 'escaped.md'), 'Review completed without blocking findings.\n');
+    const reviewsDir = join(changeDir, '.superpowers', 'sdd', 'reviews');
+    mkdirSync(reviewsDir, { recursive: true });
+    symlinkSync(outsideDir, join(reviewsDir, 'linked'), 'dir');
+
+    const reviewed = runSsf(['execution', 'review', changeDir, '--wave', 'wave-1',
+      '--base', gitRefs.base, '--head', gitRefs.head,
+      '--report', '.superpowers/sdd/reviews/linked/escaped.md', '--verdict', 'pass']);
+
+    assert.notEqual(reviewed.exitCode, 0);
+    assert.match(reviewed.stderr, /overlay|review/i);
+  });
+
+  it('rejects a report when the reviews overlay root is a symlink', () => {
+    const planned = runSsf(['execution', 'plan', changeDir, '--mode', 'sdd', '--reason', 'full workflow default',
+      '--wave', 'wave-1:serial:1.1']);
+    assert.equal(planned.exitCode, 0, planned.stderr);
+    const outsideReviewsDir = mkdtempSync(join(tmpdir(), 'ssf-external-reviews-'));
+    const reviewsDir = join(changeDir, '.superpowers', 'sdd', 'reviews');
+
+    try {
+      writeFileSync(join(outsideReviewsDir, 'wave-1.md'), 'Review completed without blocking findings.\n');
+      symlinkSync(outsideReviewsDir, reviewsDir, 'dir');
+
+      const reviewed = runSsf(['execution', 'review', changeDir, '--wave', 'wave-1',
+        '--base', gitRefs.base, '--head', gitRefs.head,
+        '--report', '.superpowers/sdd/reviews/wave-1.md', '--verdict', 'pass']);
+
+      assert.notEqual(reviewed.exitCode, 0);
+      assert.match(reviewed.stderr, /overlay|review|symbolic/i);
+    } finally {
+      rmSync(outsideReviewsDir, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a receipt range containing a nonexistent Git commit', () => {
+    const planned = runSsf(['execution', 'plan', changeDir, '--mode', 'sdd', '--reason', 'full workflow default',
+      '--wave', 'wave-1:serial:1.1']);
+    assert.equal(planned.exitCode, 0, planned.stderr);
+    const forgedCommit = '0000000000000000000000000000000000000001';
+
+    const reviewed = runSsf(['execution', 'review', changeDir, '--wave', 'wave-1',
+      '--base', forgedCommit, '--head', gitRefs.head, '--report', writeReviewReport('wave-1.md'), '--verdict', 'pass']);
+
+    assert.notEqual(reviewed.exitCode, 0);
+    assert.match(reviewed.stderr, /base|commit|Git/i);
+  });
+
+  it('rejects a receipt range whose base is not an ancestor of head', () => {
+    const planned = runSsf(['execution', 'plan', changeDir, '--mode', 'sdd', '--reason', 'full workflow default',
+      '--wave', 'wave-1:serial:1.1']);
+    assert.equal(planned.exitCode, 0, planned.stderr);
+
+    const reviewed = runSsf(['execution', 'review', changeDir, '--wave', 'wave-1',
+      '--base', gitRefs.head, '--head', gitRefs.divergent,
+      '--report', writeReviewReport('wave-1.md'), '--verdict', 'pass']);
+
+    assert.notEqual(reviewed.exitCode, 0);
+    assert.match(reviewed.stderr, /ancestor|range|base/i);
+  });
+
+  it('treats a persisted pass receipt with a forged Git base as unusable', () => {
+    const planned = runSsf(['execution', 'plan', changeDir, '--mode', 'sdd', '--reason', 'full workflow default',
+      '--wave', 'wave-1:serial:1.1', '--wave', 'wave-2:serial:1.2:wave-1']);
+    assert.equal(planned.exitCode, 0, planned.stderr);
+    const reviewed = runSsf(['execution', 'review', changeDir, '--wave', 'wave-1',
+      '--base', gitRefs.base, '--head', gitRefs.head, '--report', writeReviewReport('wave-1.md'), '--verdict', 'pass']);
+    assert.equal(reviewed.exitCode, 0, reviewed.stderr);
+
+    const receiptPath = join(changeDir, '.superpowers', 'sdd', 'reviews', Buffer.from('wave-1', 'utf8').toString('base64url') + '.json');
+    const receipt = JSON.parse(readFileSync(receiptPath, 'utf8'));
+    receipt.base = '0000000000000000000000000000000000000001';
+    writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`);
+
+    const shown = runSsf(['execution', 'show', changeDir, '--json']);
+    assert.equal(shown.exitCode, 0, shown.stderr);
+    assert.equal(shown.json.waves[0].receipt, null);
+    assert.deepEqual(shown.json.waves[1].blockers, ['wave-1']);
+    assert.equal(shown.json.waves[1].eligible, false);
+  });
+
+  it('treats a persisted pass receipt with a non-ancestral Git range as unusable', () => {
+    const planned = runSsf(['execution', 'plan', changeDir, '--mode', 'sdd', '--reason', 'full workflow default',
+      '--wave', 'wave-1:serial:1.1', '--wave', 'wave-2:serial:1.2:wave-1']);
+    assert.equal(planned.exitCode, 0, planned.stderr);
+    const reviewed = runSsf(['execution', 'review', changeDir, '--wave', 'wave-1',
+      '--base', gitRefs.base, '--head', gitRefs.head, '--report', writeReviewReport('wave-1.md'), '--verdict', 'pass']);
+    assert.equal(reviewed.exitCode, 0, reviewed.stderr);
+
+    const receiptPath = join(changeDir, '.superpowers', 'sdd', 'reviews', Buffer.from('wave-1', 'utf8').toString('base64url') + '.json');
+    const receipt = JSON.parse(readFileSync(receiptPath, 'utf8'));
+    receipt.base = gitRefs.head;
+    receipt.head = gitRefs.divergent;
+    writeFileSync(receiptPath, `${JSON.stringify(receipt, null, 2)}\n`);
+
+    const shown = runSsf(['execution', 'show', changeDir, '--json']);
+    assert.equal(shown.exitCode, 0, shown.stderr);
+    assert.equal(shown.json.waves[0].receipt, null);
+    assert.deepEqual(shown.json.waves[1].blockers, ['wave-1']);
+    assert.equal(shown.json.waves[1].eligible, false);
+  });
+
   it('does not show a pass receipt after its report evidence is deleted', () => {
     runSsf(['execution', 'plan', changeDir, '--mode', 'sdd', '--reason', 'full workflow default',
       '--wave', 'wave-1:serial:1.1']);
     const reportPath = writeReviewReport('wave-1.md');
     const reviewed = runSsf(['execution', 'review', changeDir, '--wave', 'wave-1',
-      '--base', 'abc1234', '--head', 'def5678', '--report', reportPath, '--verdict', 'pass']);
+      '--base', gitRefs.base, '--head', gitRefs.head, '--report', reportPath, '--verdict', 'pass']);
     assert.equal(reviewed.exitCode, 0, reviewed.stderr);
 
     rmSync(reportPath);
@@ -149,7 +322,7 @@ describe('ssf execution', () => {
     assert.deepEqual(shown.json.waves[1].blockers, ['wave-1']);
 
     const premature = runSsf(['execution', 'review', changeDir, '--wave', 'wave-2',
-      '--base', 'abc1234', '--head', 'def5678', '--report', 'reports/wave-2.md', '--verdict', 'pass']);
+      '--base', gitRefs.base, '--head', gitRefs.head, '--report', 'reports/wave-2.md', '--verdict', 'pass']);
     assert.notEqual(premature.exitCode, 0);
     assert.match(premature.stderr, /wave-1.*pass|dependencies/i);
   });
@@ -186,7 +359,7 @@ describe('ssf execution', () => {
     assert.equal(initial.exitCode, 0, initial.stderr);
     const reportPath = writeReviewReport('wave-1.md');
     const reviewed = runSsf(['execution', 'review', changeDir, '--wave', 'wave-1',
-      '--base', 'abc1234', '--head', 'def5678', '--report', reportPath, '--verdict', 'pass']);
+      '--base', gitRefs.base, '--head', gitRefs.head, '--report', reportPath, '--verdict', 'pass']);
     assert.equal(reviewed.exitCode, 0, reviewed.stderr);
 
     const revised = runSsf(['execution', 'revise', changeDir, '--mode', 'sdd',
@@ -205,7 +378,7 @@ describe('ssf execution', () => {
       '--reason', 'full workflow default', '--wave', 'wave-1:serial:1.1']);
     assert.equal(initial.exitCode, 0, initial.stderr);
     const reviewed = runSsf(['execution', 'review', changeDir, '--wave', 'wave-1',
-      '--base', 'base-1', '--head', 'head-1', '--report', writeReviewReport('wave-1.md'), '--verdict', 'pass']);
+      '--base', gitRefs.base, '--head', gitRefs.head, '--report', writeReviewReport('wave-1.md'), '--verdict', 'pass']);
     assert.equal(reviewed.exitCode, 0, reviewed.stderr);
 
     const replanned = runSsf(['execution', 'revise', changeDir, '--mode', 'sdd',
@@ -227,7 +400,7 @@ describe('ssf execution', () => {
       '--reason', 'full workflow default', '--wave', 'wave-1:serial:1.1']);
     assert.equal(initial.exitCode, 0, initial.stderr);
     const reviewed = runSsf(['execution', 'review', changeDir, '--wave', 'wave-1',
-      '--base', 'base-1', '--head', 'head-1', '--report', writeReviewReport('stale-wave-1.md'), '--verdict', 'pass']);
+      '--base', gitRefs.base, '--head', gitRefs.head, '--report', writeReviewReport('stale-wave-1.md'), '--verdict', 'pass']);
     assert.equal(reviewed.exitCode, 0, reviewed.stderr);
     writeFileSync(join(changeDir, 'tasks.md'), '# Tasks\n\n- [ ] 1.1 Updated task\n- [ ] 1.2 Recovery task\n');
 
@@ -252,7 +425,7 @@ describe('ssf execution', () => {
     assert.equal(planned.exitCode, 0, planned.stderr);
 
     const failed = runSsf(['execution', 'review', changeDir, '--wave', 'wave-1',
-      '--base', 'base-fail', '--head', 'head-fail', '--report', writeReviewReport('wave-1-fail.md'), '--verdict', 'fail']);
+      '--base', gitRefs.base, '--head', gitRefs.head, '--report', writeReviewReport('wave-1-fail.md'), '--verdict', 'fail']);
     assert.equal(failed.exitCode, 0, failed.stderr);
 
     let shown = runSsf(['execution', 'show', changeDir, '--json']);
@@ -264,7 +437,7 @@ describe('ssf execution', () => {
     assert.deepEqual(shown.json.waves[1].blockers, ['wave-1']);
 
     const replacement = runSsf(['execution', 'review', changeDir, '--wave', 'wave-1',
-      '--base', 'base-pass', '--head', 'head-pass', '--report', writeReviewReport('wave-1-pass.md'), '--verdict', 'pass']);
+      '--base', gitRefs.base, '--head', gitRefs.head, '--report', writeReviewReport('wave-1-pass.md'), '--verdict', 'pass']);
     assert.equal(replacement.exitCode, 0, replacement.stderr);
 
     shown = runSsf(['execution', 'show', changeDir, '--json']);
@@ -303,15 +476,15 @@ describe('ssf execution', () => {
       '--wave', 'wave-1:parallel:1.1,1.2']);
 
     const result = runSsf(['execution', 'review', changeDir, '--wave', 'wave-1',
-      '--base', 'abc1234', '--head', 'def5678', '--report', 'reports/wave-1.md', '--verdict', 'maybe', '--json']);
+      '--base', gitRefs.base, '--head', gitRefs.head, '--report', 'reports/wave-1.md', '--verdict', 'maybe', '--json']);
 
     assert.notEqual(result.exitCode, 0);
     assert.match(result.stderr, /pass.*fail|verdict/i);
   });
 
   it('rejects a review without exactly one wave selector', () => {
-    const result = runSsf(['execution', 'review', changeDir, '--base', 'abc1234',
-      '--head', 'def5678', '--report', 'reports/wave-1.md', '--verdict', 'pass']);
+    const result = runSsf(['execution', 'review', changeDir, '--base', gitRefs.base,
+      '--head', gitRefs.head, '--report', 'reports/wave-1.md', '--verdict', 'pass']);
 
     assert.notEqual(result.exitCode, 0);
     assert.match(result.stderr, /--wave is required/);

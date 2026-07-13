@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
-import { existsSync, lstatSync, mkdirSync, readFileSync, renameSync, rmSync, writeFileSync } from 'node:fs';
-import { join } from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { existsSync, lstatSync, mkdirSync, readFileSync, realpathSync, renameSync, rmSync, writeFileSync } from 'node:fs';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { computeArtifactsHash, computeContractHash } from './hash.mjs';
 import { getOverlayPaths } from './sdd-overlay.mjs';
 import { readState } from './state-loader.mjs';
@@ -103,13 +104,14 @@ export function recordReview(changeDir, waveId, receipt) {
     throw new Error("Review receipt status must be 'pass' or 'fail'");
   }
   for (const field of ['base', 'head']) requireText(receipt?.[field], `receipt.${field}`);
-  validateReviewReportEvidence(receipt?.report);
+  const report = validateReviewReportEvidence(changeDir, receipt?.report);
+  const { base, head } = validateReviewRange(changeDir, receipt.base, receipt.head);
 
   const savedReceipt = {
     status: receipt.status,
-    base: receipt.base,
-    head: receipt.head,
-    report: receipt.report,
+    base,
+    head,
+    report,
     plan_hash: plan.hash,
     plan_revision: plan.revision,
     recorded_at: new Date().toISOString(),
@@ -131,10 +133,12 @@ export function readCurrentReview(changeDir, waveId, plan = readPlan(changeDir))
   try {
     const receipt = JSON.parse(readFileSync(filePath, 'utf8'));
     if (receipt?.plan_hash !== plan.hash || receipt?.plan_revision !== plan.revision) return null;
+    const range = validateReviewRange(changeDir, receipt?.base, receipt?.head);
+    if (receipt.base !== range.base || receipt.head !== range.head) return null;
     // A passing receipt is current evidence only while its referenced report
     // remains safe and readable. Recheck it here because reports can be
     // deleted or replaced after the receipt was recorded.
-    if (receipt?.status === 'pass') validateReviewReportEvidence(receipt.report);
+    if (receipt?.status === 'pass') validateReviewReportEvidence(changeDir, receipt.report);
     return receipt;
   } catch {
     return null;
@@ -165,15 +169,18 @@ export function describeWaves(changeDir, plan = readPlan(changeDir)) {
   });
 }
 
-function validateReviewReportEvidence(report) {
+function validateReviewReportEvidence(changeDir, report) {
   requireText(report, 'receipt.report');
   if (/[\p{Cc}\p{Zl}\p{Zp}]/u.test(report)) {
     throw new Error('Review report evidence path is unsafe');
   }
 
+  const { changeRoot, reviewsDir } = getPhysicalReviewsDirectory(changeDir);
+  const reportPath = isAbsolute(report) ? resolve(report) : resolve(changeRoot, report);
+
   let metadata;
   try {
-    metadata = lstatSync(report);
+    metadata = lstatSync(reportPath);
   } catch (error) {
     throw new Error(`Review report evidence cannot be read: ${error.message}`);
   }
@@ -182,6 +189,72 @@ function validateReviewReportEvidence(report) {
   }
   if (metadata.size === 0) {
     throw new Error('Review report evidence must be non-empty');
+  }
+  const realReportPath = realpathSync(reportPath);
+  const realOverlayRelativePath = relative(reviewsDir, realReportPath);
+  if (realOverlayRelativePath === '' || realOverlayRelativePath === '..' || realOverlayRelativePath.startsWith(`..${sep}`) || isAbsolute(realOverlayRelativePath)) {
+    throw new Error('Review report evidence must resolve inside the change review overlay');
+  }
+  return relative(changeRoot, realReportPath);
+}
+
+function getPhysicalReviewsDirectory(changeDir) {
+  let changeRoot;
+  try {
+    changeRoot = realpathSync(changeDir);
+  } catch (error) {
+    throw new Error(`Review report evidence cannot resolve the change directory: ${error.message}`);
+  }
+
+  let directory = changeRoot;
+  for (const component of ['.superpowers', 'sdd', 'reviews']) {
+    directory = join(directory, component);
+    let metadata;
+    try {
+      metadata = lstatSync(directory);
+    } catch (error) {
+      throw new Error(`Review report evidence cannot read the ${component} overlay directory: ${error.message}`);
+    }
+    if (metadata.isSymbolicLink() || !metadata.isDirectory()) {
+      throw new Error('Review report evidence requires physical .superpowers/sdd/reviews overlay directories');
+    }
+  }
+  return { changeRoot, reviewsDir: directory };
+}
+
+function validateReviewRange(changeDir, base, head) {
+  const gitRoot = getGitRoot(changeDir);
+  const resolvedBase = resolveGitCommit(gitRoot, base, 'base');
+  const resolvedHead = resolveGitCommit(gitRoot, head, 'head');
+  try {
+    execFileSync('git', ['-C', gitRoot, 'merge-base', '--is-ancestor', resolvedBase, resolvedHead], {
+      stdio: 'ignore',
+    });
+  } catch {
+    throw new Error('Review receipt base must be an ancestor of head');
+  }
+  return { base: resolvedBase, head: resolvedHead };
+}
+
+function getGitRoot(changeDir) {
+  try {
+    return execFileSync('git', ['-C', changeDir, 'rev-parse', '--show-toplevel'], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+  } catch {
+    throw new Error('Review receipts require the change directory to be inside a Git work tree');
+  }
+}
+
+function resolveGitCommit(gitRoot, revision, field) {
+  try {
+    return execFileSync('git', ['-C', gitRoot, 'rev-parse', '--verify', `${revision}^{commit}`], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'ignore'],
+    }).trim();
+  } catch {
+    throw new Error(`Review receipt ${field} must name an existing Git commit`);
   }
 }
 

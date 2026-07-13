@@ -69,6 +69,46 @@ describe('execution control plane instructions', () => {
       'CLI help describes SDD replanning instead of only inline upgrades');
   });
 
+  it('documents portable and auditable review receipt evidence', () => {
+    const localizedDocuments = ['README.md', 'INSTALL.md'];
+
+    for (const path of localizedDocuments) {
+      const content = read(path);
+      assert.match(content,
+        /--report.*相对于.*<change>.*解析.*<change>\/.superpowers\/sdd\/reviews/is,
+        `${path} resolves review reports from the change directory into its reviews overlay`);
+      assert.match(content, /--base.*--head.*真实.*commit/is,
+        `${path} requires real commits for review ranges`);
+      assert.match(content, /<change>.*Git.*工作树/is,
+        `${path} binds review ranges to the change worktree`);
+      assert.match(content, /base.*head.*祖先/is,
+        `${path} requires base to precede head`);
+      assert.match(content,
+        /<change>\/.superpowers\/sdd\/reviews\/.*物理.*非符号链接/is,
+        `${path} requires physical, non-symlink review overlay directories`);
+      assert.match(content,
+        /report.*普通.*非空.*非符号链接.*文件/is,
+        `${path} requires review reports to be regular, non-empty, non-symlink files`);
+    }
+
+    const english = read('docs/README_en.md');
+    assert.match(english,
+      /--report.*resolved relative to.*<change>.*must remain under.*<change>\/.superpowers\/sdd\/reviews/is,
+      'English documentation resolves review reports from the change directory into its reviews overlay');
+    assert.match(english, /--base.*--head.*real commits/is,
+      'English documentation requires real commits for review ranges');
+    assert.match(english, /<change>.*Git worktree/is,
+      'English documentation binds review ranges to the change worktree');
+    assert.match(english, /base.*ancestor.*head/is,
+      'English documentation requires base to precede head');
+    assert.match(english,
+      /<change>\/.superpowers\/sdd\/reviews\/.*physical.*non-symlink/is,
+      'English documentation requires physical, non-symlink review overlay directories');
+    assert.match(english,
+      /report.*regular.*non-empty.*non-symlink.*file/is,
+      'English documentation requires review reports to be regular, non-empty, non-symlink files');
+  });
+
   it('keeps execution mode and review gates machine-backed in every entry point', () => {
     const workflowStart = read('skills/workflow-start/SKILL.md');
     const buildExecutor = read('skills/build-executor/SKILL.md');
