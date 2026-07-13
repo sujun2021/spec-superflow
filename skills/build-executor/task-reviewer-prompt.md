@@ -35,6 +35,8 @@ Subagent (general-purpose):
     **Head:** [HEAD_SHA]
     **Diff file:** [DIFF_FILE]
 
+    **Planned wave:** [WAVE_ID]
+
     Read the diff file once — it contains the commit list, a stat summary,
     and the full diff with surrounding context, and it is your view of the
     change. The diff's context lines ARE the changed files: do not Read a
@@ -138,6 +140,15 @@ Subagent (general-purpose):
 
     ## Output Format
 
+    After the verdict, provide the exact receipt command for the controller:
+
+    ```bash
+    ssf execution review <change-dir> --wave [WAVE_ID] --base [BASE_SHA] --head [HEAD_SHA] --report [REPORT_FILE] --verdict <pass|fail>
+    ```
+
+    Use `fail` for any Critical/Important finding. A repair must be re-reviewed
+    and recorded with a replacement `pass` receipt before a dependent wave may start.
+
     ### Spec Compliance
 
     - ✅ Spec compliant | ❌ Issues found: [what's missing/extra/misunderstood,
@@ -173,6 +184,7 @@ Subagent (general-purpose):
 - `[BASE_SHA]` — commit before this task
 - `[HEAD_SHA]` — current commit
 - `[DIFF_FILE]` — REQUIRED: the path the controller wrote the review package to (`scripts/review-package BASE HEAD` prints the unique path it wrote; the package never enters the controller's context)
+- `[WAVE_ID]` — REQUIRED: the execution-plan wave being reviewed
 
 **Reviewer returns:** Spec Compliance verdict (✅/❌/⚠️), Strengths, Issues (Critical/Important/Minor), Task quality verdict
 

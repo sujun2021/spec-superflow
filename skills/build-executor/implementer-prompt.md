@@ -19,6 +19,14 @@ Subagent (general-purpose):
 
     [Scene-setting: where this fits, dependencies, architectural context]
 
+    ## Planned Wave
+
+    You are assigned to planned wave [WAVE_ID] with strategy [WAVE_STRATEGY].
+    Read `ssf execution show <change-dir> --json` before editing. Do not start
+    unless all declared dependencies have `pass` review receipts. A `parallel`
+    label permits concurrent dispatch only when the controller confirms the
+    platform supports it; never change the saved wave strategy yourself.
+
     ## Before You Begin
 
     If you have questions about:
@@ -121,6 +129,8 @@ Subagent (general-purpose):
     - Files changed
     - Self-review findings (if any)
     - Any issues or concerns
+    - Planned wave ID, commit base/head, and review report path for the
+      controller to record the wave receipt
 
     Then report back with ONLY (under 15 lines — the detail lives in the
     report file):
