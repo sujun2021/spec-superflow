@@ -59,9 +59,14 @@ describe('execution control plane instructions', () => {
     for (const path of ['README.md', 'docs/README_en.md', 'INSTALL.md']) {
       const content = read(path);
       assert.match(content, /execution revise/i, `${path} documents execution revise`);
-      assert.match(content, /only upgrades.*inline\/batch-inline.*sdd|只允许.*inline\/batch-inline.*升级为 sdd/i,
-        `${path} limits execution revise to inline/batch-inline upgrades to SDD`);
+      assert.match(content,
+        /retains?\/upgrades?.*sdd.*replan|inline\/batch-inline.*(?:upgrades?|升级).*sdd.*(?:or|或).*(?:replans?|重规划).*sdd/is,
+        `${path} allows SDD replanning while retaining the no-downgrade contract`);
+      assert.match(content, /downgrade|降级/i, `${path} keeps SDD downgrade rejection explicit`);
     }
+
+    assert.match(read('scripts/spec-superflow.mjs'), /upgrade inline\/batch.*replan existing sdd.*new revision/is,
+      'CLI help describes SDD replanning instead of only inline upgrades');
   });
 
   it('keeps execution mode and review gates machine-backed in every entry point', () => {

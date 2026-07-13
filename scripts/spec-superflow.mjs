@@ -65,7 +65,7 @@ Commands:
   execution show <change-dir> [--json]
                         Show and validate the current execution plan
   execution revise <change-dir> --mode sdd --reason <text> --wave <id>:<strategy>:<task,...>
-                        Upgrade an inline plan to SDD and record a new revision
+                        Upgrade inline/batch to SDD, or replan existing SDD waves, as a new revision
   execution review <change-dir> --wave <id> --base <sha> --head <sha> --report <path> --verdict pass|fail
                         Record one review receipt for a planned wave
   install-cursor        Deploy skills/scripts/docs to .cursor/ (local Cursor setup)

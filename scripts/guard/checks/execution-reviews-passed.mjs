@@ -8,9 +8,10 @@ import { readCurrentReview, readPlan, validatePlan } from '../../lib/execution-p
 export function checkExecutionReviewsPassed(changeDir) {
   const plan = readPlan(changeDir);
   if (!plan) {
-    // New full/hotfix executions cannot reach this transition without a plan:
-    // execution-plan-ready blocks their entry. Treat a legacy state without a
-    // plan as having no planned waves so existing historical changes can close.
+    // This dimension only evaluates receipts. Full/hotfix transitions pair it
+    // with execution-plan-ready, which rejects a missing plan; tweak omits
+    // this dimension entirely. Keep the missing-plan result owned by that
+    // dedicated dimension rather than duplicating it here.
     return { pass: true, failures: [] };
   }
 

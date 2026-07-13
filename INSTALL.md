@@ -697,7 +697,7 @@ ssf execution plan changes/my-change --mode sdd --reason "independent work" \
   --wave foundation:parallel:1.1,1.2 \
   --wave integration:serial:2.1:foundation
 ssf execution show changes/my-change --json
-# 只允许把已有 inline/batch-inline 计划升级为 sdd；不能用它编辑 wave 或依赖。
+# 可将已有 inline/batch-inline 计划升级为 sdd，或重规划已有 sdd 的 wave/依赖；不能降级。
 ssf execution revise changes/my-change --mode sdd --reason "need parallel work" \
   --wave foundation:parallel:1.1,1.2 \
   --wave integration:serial:2.1:foundation
