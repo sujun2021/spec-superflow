@@ -6,12 +6,18 @@
 // Automatically run post-install so every contributor gets the guard.
 
 import { writeFileSync, existsSync, chmodSync, readFileSync } from 'node:fs';
-import { join, dirname } from 'node:path';
+import { join, dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { execFileSync } from 'node:child_process';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(__dirname, '..');
-const HOOKS_DIR = join(ROOT, '.git', 'hooks');
+// Ask Git for the common hooks directory so linked worktrees install correctly.
+// `git rev-parse --git-path hooks` may be relative in a normal checkout.
+const HOOKS_DIR = resolve(ROOT, execFileSync('git', ['rev-parse', '--git-path', 'hooks'], {
+  cwd: ROOT,
+  encoding: 'utf8',
+}).trim());
 const HOOK_PATH = join(HOOKS_DIR, 'pre-commit');
 
 const HOOK_SCRIPT = `#!/usr/bin/env bash
@@ -21,7 +27,7 @@ const HOOK_SCRIPT = `#!/usr/bin/env bash
 
 set -euo pipefail
 
-REPO_ROOT="$(cd "$(dirname "$0")/../.." && pwd)"
+REPO_ROOT="$(git rev-parse --show-toplevel)"
 
 echo "🔍 spec-superflow: checking version consistency..."
 
@@ -41,16 +47,20 @@ if (!existsSync(HOOKS_DIR)) {
   process.exit(1);
 }
 
-// Preserve existing hook if it's not ours
+// Preserve an unrelated hook, but upgrade an older spec-superflow hook.
 const MARKER = '# spec-superflow pre-commit hook';
 if (existsSync(HOOK_PATH)) {
   const existing = readFileSync(HOOK_PATH, 'utf-8');
   if (existing.includes(MARKER)) {
-    console.log('✅ Pre-commit hook already installed (spec-superflow).');
-    process.exit(0);
+    if (existing === HOOK_SCRIPT) {
+      console.log('✅ Pre-commit hook already installed (spec-superflow).');
+      process.exit(0);
+    }
+    console.log('♻️  Updating existing pre-commit hook (spec-superflow).');
+  } else {
+    console.log('⚠️  Existing pre-commit hook found. Backing up to pre-commit.backup ...');
+    writeFileSync(`${HOOK_PATH}.backup`, existing);
   }
-  console.log('⚠️  Existing pre-commit hook found. Backing up to pre-commit.backup ...');
-  writeFileSync(`${HOOK_PATH}.backup`, existing);
 }
 
 writeFileSync(HOOK_PATH, HOOK_SCRIPT);

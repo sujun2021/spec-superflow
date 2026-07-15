@@ -2,6 +2,12 @@
 import { readFileSync, readdirSync, existsSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadConfig } from './config-loader.mjs';
+import { PLATFORM_RUNTIME_INVENTORY } from './platform-runtime-inventory.mjs';
+
+const RUNTIME_SKILLS = new Set([
+  'workflow-start', 'need-explorer', 'spec-writer', 'contract-builder',
+  'build-executor', 'code-reviewer', 'bug-investigator', 'release-archivist', 'spec-merger',
+]);
 
 function readJsonIfExists(filePath) {
   if (!existsSync(filePath)) return null;
@@ -95,6 +101,48 @@ function checkSkills(root) {
   return { pass: false, message: `${withSkillMd.length}/${dirs.length} present, missing SKILL.md: ${missing.join(', ')}` };
 }
 
+function localRuntimePaths(content) {
+  const doubleQuoted = [...content.matchAll(/node\s+"([^"]+\/scripts\/spec-superflow\.mjs)"/g)]
+    .map(match => match[1]);
+  const singleQuoted = [...content.matchAll(/node\s+'(.+\/scripts\/spec-superflow\.mjs)'/g)]
+    .map(match => match[1].split("'\\''").join("'"));
+  return [...doubleQuoted, ...singleQuoted];
+}
+
+function checkRuntimeDistribution(root) {
+  const pkg = readJsonIfExists(join(root, 'package.json'));
+  const skillsDir = join(root, 'skills');
+  if (!pkg?.version || !existsSync(skillsDir)) {
+    return { pass: false, message: 'runtime distribution cannot be checked: package.json or skills/ is missing; reinstall spec-superflow' };
+  }
+
+  const canonicalPrefix = `npx --yes --package spec-superflow@${pkg.version} ssf`;
+  const issues = [];
+  for (const name of readdirSync(skillsDir)) {
+    if (!RUNTIME_SKILLS.has(name)) continue;
+    const skillPath = join(skillsDir, name, 'SKILL.md');
+    if (!existsSync(skillPath)) continue;
+    const content = readFileSync(skillPath, 'utf8');
+    if (/\$\{CLAUDE_PLUGIN_ROOT\}|\$\{PLUGIN_ROOT\}/.test(content)) {
+      issues.push(`${name}: plugin-root placeholder remains`);
+      continue;
+    }
+    if (content.includes(canonicalPrefix)) continue;
+    const localPaths = localRuntimePaths(content);
+    if (localPaths.length > 0) {
+      if (localPaths.every(existsSync)) continue;
+      issues.push(`${name}: local runtime tree is missing`);
+      continue;
+    }
+    issues.push(`${name}: runtime prefix or local runtime tree is missing`);
+  }
+
+  if (issues.length > 0) {
+    return { pass: false, message: `${issues.join('; ')}; reinstall or upgrade spec-superflow instead of editing skill files manually` };
+  }
+  return { pass: true, message: `${PLATFORM_RUNTIME_INVENTORY.length} platforms inventoried; canonical skills and local runtime are resolvable` };
+}
+
 function checkDist(root) {
   const distDir = join(root, 'dist');
   if (!existsSync(distDir)) {
@@ -184,6 +232,7 @@ export async function run(args) {
     ['Hooks', checkHooks(root)],
     ['Codex manifest', checkCodexManifest(root)],
     ['Skills', checkSkills(root)],
+    ['Runtime distribution', checkRuntimeDistribution(root)],
     ['dist/', checkDist(root)],
     ['Node.js', checkNodeVersion()],
     ['Docs', checkDocs(root)],
@@ -215,4 +264,4 @@ export async function run(args) {
   }
 }
 
-export { checkVersionConsistency, checkHooks, checkCodexManifest, checkSkills, checkDist, checkRootPluginAuthor, checkNodeVersion, checkDocs };
+export { checkVersionConsistency, checkHooks, checkCodexManifest, checkSkills, checkRuntimeDistribution, checkDist, checkRootPluginAuthor, checkNodeVersion, checkDocs };

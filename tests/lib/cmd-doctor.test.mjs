@@ -362,3 +362,89 @@ describe('cmd-doctor: checkDocs()', () => {
     assert.equal(result.pass, true);
   });
 });
+
+describe('cmd-doctor: checkRuntimeDistribution()', () => {
+  let checkRuntimeDistribution;
+
+  before(async () => {
+    const modulePath = join(process.cwd(), 'scripts/lib/cmd-doctor.mjs');
+    const mod = await import(modulePath);
+    checkRuntimeDistribution = mod.checkRuntimeDistribution;
+  });
+
+  it('passes for the canonical package and reports platform coverage', () => {
+    const result = checkRuntimeDistribution(process.cwd());
+
+    assert.equal(result.pass, true, result.message);
+    assert.match(result.message, /17 platforms/);
+  });
+
+  it('reports an unrewritten plugin-root placeholder as an upgrade issue', () => {
+    const root = mkdtempSync(join(tmpdir(), 'ssf-doctor-runtime-'));
+    try {
+      mkdirSync(join(root, 'skills', 'workflow-start'), { recursive: true });
+      writeFileSync(join(root, 'package.json'), JSON.stringify({ version: '1.2.3' }));
+      writeFileSync(join(root, 'skills', 'workflow-start', 'SKILL.md'),
+        'node "${CLAUDE_PLUGIN_ROOT}/scripts/spec-superflow.mjs" state get demo');
+
+      const result = checkRuntimeDistribution(root);
+      assert.equal(result.pass, false);
+      assert.match(result.message, /plugin-root placeholder|reinstall/i);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('checks code-reviewer as a portable runtime skill', () => {
+    const root = mkdtempSync(join(tmpdir(), 'ssf-doctor-code-reviewer-'));
+    try {
+      mkdirSync(join(root, 'skills', 'code-reviewer'), { recursive: true });
+      writeFileSync(join(root, 'package.json'), JSON.stringify({ version: '1.2.3' }));
+      writeFileSync(join(root, 'skills', 'code-reviewer', 'SKILL.md'),
+        'node "${CLAUDE_PLUGIN_ROOT}/scripts/spec-superflow.mjs" execution review demo');
+
+      const result = checkRuntimeDistribution(root);
+      assert.equal(result.pass, false);
+      assert.match(result.message, /code-reviewer: plugin-root placeholder remains/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('rejects a local command whose referenced runtime file is missing', () => {
+    const root = mkdtempSync(join(tmpdir(), 'ssf-doctor-stale-runtime-'));
+    try {
+      mkdirSync(join(root, 'skills', 'workflow-start'), { recursive: true });
+      mkdirSync(join(root, 'scripts'), { recursive: true });
+      writeFileSync(join(root, 'package.json'), JSON.stringify({ version: '1.2.3' }));
+      writeFileSync(join(root, 'scripts', 'spec-superflow.mjs'), '// unrelated bundled CLI');
+      writeFileSync(join(root, 'skills', 'workflow-start', 'SKILL.md'),
+        'node "/tmp/missing-runtime/scripts/spec-superflow.mjs" state get demo');
+
+      const result = checkRuntimeDistribution(root);
+      assert.equal(result.pass, false);
+      assert.match(result.message, /workflow-start: local runtime tree is missing/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+
+  it('accepts a POSIX-escaped local runtime path containing a single quote', () => {
+    const root = mkdtempSync(join(tmpdir(), "ssf-doctor-quote-'"));
+    try {
+      const localCli = join(root, 'scripts', 'spec-superflow.mjs');
+      mkdirSync(join(root, 'skills', 'workflow-start'), { recursive: true });
+      mkdirSync(join(root, 'scripts'), { recursive: true });
+      writeFileSync(join(root, 'package.json'), JSON.stringify({ version: '1.2.3' }));
+      writeFileSync(localCli, '// bundled CLI');
+      const quotedCli = `'${localCli.replace(/'/g, "'\\''")}'`;
+      writeFileSync(join(root, 'skills', 'workflow-start', 'SKILL.md'),
+        `node ${quotedCli} state get demo`);
+
+      const result = checkRuntimeDistribution(root);
+      assert.equal(result.pass, true, result.message);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
+});

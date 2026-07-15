@@ -23,6 +23,7 @@ import { dirname, join, resolve } from 'node:path';
 import { parseArgs } from 'node:util';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
+import { shellQuote } from './shell-quote.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const defaultPluginRoot = resolve(__dirname, '..', '..'); // repo root when run from clone
@@ -95,8 +96,12 @@ async function copySkillsWithRoot(sourceSkills, targetSkills, pluginRootAbs) {
     let content = readFileSync(filePath, 'utf-8');
     if (content.includes('${CLAUDE_PLUGIN_ROOT}')) {
       content = content.replace(/\$\{CLAUDE_PLUGIN_ROOT\}/g, pluginRootAbs);
-      writeFileSync(filePath, content, 'utf-8');
     }
+    content = content.replace(
+      /npx --yes --package spec-superflow@\d+\.\d+\.\d+ ssf/g,
+      `node ${shellQuote(join(pluginRootAbs, 'scripts', 'spec-superflow.mjs'))}`,
+    );
+    writeFileSync(filePath, content, 'utf-8');
   }
 
   for (const name of entries) {

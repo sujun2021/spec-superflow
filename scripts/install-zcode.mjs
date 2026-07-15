@@ -13,6 +13,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { parseArgs } from 'node:util';
+import { shellQuote } from './lib/shell-quote.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const defaultPluginRoot = dirname(__dirname); // repository root when running from clone
@@ -21,7 +22,7 @@ const targetRoot = process.cwd();
 const GITHUB_REPO = 'MageByte-Zero/spec-superflow';
 const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
 
-// Directories needed at runtime by skills (referenced via ${CLAUDE_PLUGIN_ROOT})
+// Directories needed by local installer-rewritten runtime commands.
 const RUNTIME_DIRS = ['scripts', 'docs', 'templates', 'dist', 'hooks'];
 
 function ensureDir(dir) {
@@ -102,8 +103,12 @@ async function copySkillsWithRoot(sourceSkills, targetSkills, pluginRootAbs) {
       let content = readFileSync(skillMd, 'utf-8');
       if (content.includes('${CLAUDE_PLUGIN_ROOT}')) {
         content = content.replace(/\$\{CLAUDE_PLUGIN_ROOT\}/g, pluginRootAbs);
-        writeFileSync(skillMd, content, 'utf-8');
       }
+      content = content.replace(
+        /npx --yes --package spec-superflow@\d+\.\d+\.\d+ ssf/g,
+        `node ${shellQuote(join(pluginRootAbs, 'scripts', 'spec-superflow.mjs'))}`,
+      );
+      writeFileSync(skillMd, content, 'utf-8');
     }
     // Also fix sub-prompt files (implementer-prompt.md, etc.)
     const subFiles = readdirSync(dst).filter(f => f.endsWith('.md') && f !== 'SKILL.md');
@@ -112,8 +117,12 @@ async function copySkillsWithRoot(sourceSkills, targetSkills, pluginRootAbs) {
       let content = readFileSync(subPath, 'utf-8');
       if (content.includes('${CLAUDE_PLUGIN_ROOT}')) {
         content = content.replace(/\$\{CLAUDE_PLUGIN_ROOT\}/g, pluginRootAbs);
-        writeFileSync(subPath, content, 'utf-8');
       }
+      content = content.replace(
+        /npx --yes --package spec-superflow@\d+\.\d+\.\d+ ssf/g,
+        `node ${shellQuote(join(pluginRootAbs, 'scripts', 'spec-superflow.mjs'))}`,
+      );
+      writeFileSync(subPath, content, 'utf-8');
     }
   }
 
