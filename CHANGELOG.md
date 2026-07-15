@@ -13,6 +13,7 @@ The format loosely follows Keep a Changelog.
 - **#52 — isolate optional name**: `ssf isolate <change-dir>` no longer forwards an absent optional name as the literal string `undefined`; explicit names and `--force` retain their existing behavior.
 - **#43 — portable skill runtime**: all nine canonical skills no longer require `${CLAUDE_PLUGIN_ROOT}`. Raw marketplace, cache, copy, and symlink loading use a semver-pinned package CLI; local installers rewrite that prefix to their bundled runtime tree.
 - **Cross-platform runtime diagnostics**: `ssf doctor` now detects stale root placeholders and missing runtime trees, while version sync and CI consistency checks include all nine canonical skill prefixes.
+- **Linked-worktree version hook**: `npm run setup-hooks` now locates Git's shared hooks directory, upgrades stale spec-superflow hooks, and validates the worktree being committed rather than a sibling checkout.
 - **#45 — Execution-mode recommendation**: DP-4 now runs `ssf execution recommend` to list Inline, Batch Inline, and SDD from task and wave evidence, with a recommendation. Every persisted plan at `<change>/.superpowers/sdd/execution-plan.json` requires explicit `--confirm`; a non-recommended selection records `--acknowledge-recommendation` instead of treating Inline as an override. Named waves, dependencies, and review receipts remain mandatory.
 
 ### Added
