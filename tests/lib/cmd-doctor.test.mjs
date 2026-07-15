@@ -428,4 +428,23 @@ describe('cmd-doctor: checkRuntimeDistribution()', () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  it('accepts a POSIX-escaped local runtime path containing a single quote', () => {
+    const root = mkdtempSync(join(tmpdir(), "ssf-doctor-quote-'"));
+    try {
+      const localCli = join(root, 'scripts', 'spec-superflow.mjs');
+      mkdirSync(join(root, 'skills', 'workflow-start'), { recursive: true });
+      mkdirSync(join(root, 'scripts'), { recursive: true });
+      writeFileSync(join(root, 'package.json'), JSON.stringify({ version: '1.2.3' }));
+      writeFileSync(localCli, '// bundled CLI');
+      const quotedCli = `'${localCli.replace(/'/g, "'\\''")}'`;
+      writeFileSync(join(root, 'skills', 'workflow-start', 'SKILL.md'),
+        `node ${quotedCli} state get demo`);
+
+      const result = checkRuntimeDistribution(root);
+      assert.equal(result.pass, true, result.message);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });

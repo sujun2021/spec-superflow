@@ -101,6 +101,14 @@ function checkSkills(root) {
   return { pass: false, message: `${withSkillMd.length}/${dirs.length} present, missing SKILL.md: ${missing.join(', ')}` };
 }
 
+function localRuntimePaths(content) {
+  const doubleQuoted = [...content.matchAll(/node\s+"([^"]+\/scripts\/spec-superflow\.mjs)"/g)]
+    .map(match => match[1]);
+  const singleQuoted = [...content.matchAll(/node\s+'(.+\/scripts\/spec-superflow\.mjs)'/g)]
+    .map(match => match[1].split("'\\''").join("'"));
+  return [...doubleQuoted, ...singleQuoted];
+}
+
 function checkRuntimeDistribution(root) {
   const pkg = readJsonIfExists(join(root, 'package.json'));
   const skillsDir = join(root, 'skills');
@@ -120,12 +128,9 @@ function checkRuntimeDistribution(root) {
       continue;
     }
     if (content.includes(canonicalPrefix)) continue;
-    const localRuntimePaths = [
-      ...content.matchAll(/node\s+"([^"]+\/scripts\/spec-superflow\.mjs)"/g),
-      ...content.matchAll(/node\s+'([^']+\/scripts\/spec-superflow\.mjs)'/g),
-    ].map(match => match[1]);
-    if (localRuntimePaths.length > 0) {
-      if (localRuntimePaths.every(existsSync)) continue;
+    const localPaths = localRuntimePaths(content);
+    if (localPaths.length > 0) {
+      if (localPaths.every(existsSync)) continue;
       issues.push(`${name}: local runtime tree is missing`);
       continue;
     }
