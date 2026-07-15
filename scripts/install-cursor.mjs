@@ -13,6 +13,7 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { execFileSync } from 'node:child_process';
 import { parseArgs } from 'node:util';
+import { shellQuote } from './lib/shell-quote.mjs';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const defaultPluginRoot = dirname(__dirname); // repository root when running from clone
@@ -105,7 +106,7 @@ async function copySkillsWithRoot(sourceSkills, targetSkills, pluginRootAbs) {
       }
       content = content.replace(
         /npx --yes --package spec-superflow@\d+\.\d+\.\d+ ssf/g,
-        `node "${join(pluginRootAbs, 'scripts', 'spec-superflow.mjs')}"`,
+        `node ${shellQuote(join(pluginRootAbs, 'scripts', 'spec-superflow.mjs'))}`,
       );
       writeFileSync(skillMd, content, 'utf-8');
     }
@@ -119,7 +120,7 @@ async function copySkillsWithRoot(sourceSkills, targetSkills, pluginRootAbs) {
       }
       content = content.replace(
         /npx --yes --package spec-superflow@\d+\.\d+\.\d+ ssf/g,
-        `node "${join(pluginRootAbs, 'scripts', 'spec-superflow.mjs')}"`,
+        `node ${shellQuote(join(pluginRootAbs, 'scripts', 'spec-superflow.mjs'))}`,
       );
       writeFileSync(subPath, content, 'utf-8');
     }

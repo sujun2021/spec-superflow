@@ -410,4 +410,22 @@ describe('cmd-doctor: checkRuntimeDistribution()', () => {
       rmSync(root, { recursive: true, force: true });
     }
   });
+
+  it('rejects a local command whose referenced runtime file is missing', () => {
+    const root = mkdtempSync(join(tmpdir(), 'ssf-doctor-stale-runtime-'));
+    try {
+      mkdirSync(join(root, 'skills', 'workflow-start'), { recursive: true });
+      mkdirSync(join(root, 'scripts'), { recursive: true });
+      writeFileSync(join(root, 'package.json'), JSON.stringify({ version: '1.2.3' }));
+      writeFileSync(join(root, 'scripts', 'spec-superflow.mjs'), '// unrelated bundled CLI');
+      writeFileSync(join(root, 'skills', 'workflow-start', 'SKILL.md'),
+        'node "/tmp/missing-runtime/scripts/spec-superflow.mjs" state get demo');
+
+      const result = checkRuntimeDistribution(root);
+      assert.equal(result.pass, false);
+      assert.match(result.message, /workflow-start: local runtime tree is missing/);
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
+  });
 });

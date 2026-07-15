@@ -109,7 +109,6 @@ function checkRuntimeDistribution(root) {
   }
 
   const canonicalPrefix = `npx --yes --package spec-superflow@${pkg.version} ssf`;
-  const localCli = join(root, 'scripts', 'spec-superflow.mjs');
   const issues = [];
   for (const name of readdirSync(skillsDir)) {
     if (!RUNTIME_SKILLS.has(name)) continue;
@@ -121,7 +120,15 @@ function checkRuntimeDistribution(root) {
       continue;
     }
     if (content.includes(canonicalPrefix)) continue;
-    if (/node\s+"[^"]+\/scripts\/spec-superflow\.mjs"/.test(content) && existsSync(localCli)) continue;
+    const localRuntimePaths = [
+      ...content.matchAll(/node\s+"([^"]+\/scripts\/spec-superflow\.mjs)"/g),
+      ...content.matchAll(/node\s+'([^']+\/scripts\/spec-superflow\.mjs)'/g),
+    ].map(match => match[1]);
+    if (localRuntimePaths.length > 0) {
+      if (localRuntimePaths.every(existsSync)) continue;
+      issues.push(`${name}: local runtime tree is missing`);
+      continue;
+    }
     issues.push(`${name}: runtime prefix or local runtime tree is missing`);
   }
 

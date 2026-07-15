@@ -83,12 +83,15 @@ for (const check of TEXT_CHECKS) {
   }
 }
 
-const RUNTIME_SKILLS = [
+const RUNTIME_FILES = [
   'workflow-start', 'need-explorer', 'spec-writer', 'contract-builder',
   'build-executor', 'code-reviewer', 'bug-investigator', 'release-archivist', 'spec-merger',
-];
-for (const skill of RUNTIME_SKILLS) {
-  const file = `skills/${skill}/SKILL.md`;
+].map(skill => `skills/${skill}/SKILL.md`).concat([
+  'skills/build-executor/implementer-prompt.md',
+  'skills/build-executor/task-reviewer-prompt.md',
+  'skills/code-reviewer/code-reviewer-prompt.md',
+]);
+for (const file of RUNTIME_FILES) {
   const fp = join(ROOT, file);
   if (!existsSync(fp)) {
     errors.push({ file, found: 'FILE_NOT_FOUND', expected: CANONICAL });

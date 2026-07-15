@@ -76,10 +76,29 @@ describe('local runtime deployment', () => {
 
       const pluginRoot = join(target, '.zcode', 'spec-superflow');
       const content = readFileSync(join(target, '.zcode', 'skills', 'workflow-start', 'SKILL.md'), 'utf8');
-      const localPrefix = `node "${join(realpathSync(pluginRoot), 'scripts', 'spec-superflow.mjs')}"`;
+      const localPrefix = `node '${join(realpathSync(pluginRoot), 'scripts', 'spec-superflow.mjs')}'`;
 
       assert.match(content, new RegExp(localPrefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
       assert.doesNotMatch(content, new RegExp(PREFIX.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    } finally {
+      rmSync(target, { recursive: true, force: true });
+    }
+  });
+
+  it('emits a shell-literal local runtime command when the target path contains a dollar sign', () => {
+    const target = mkdtempSync(join(tmpdir(), 'ssf-$runtime-'));
+    try {
+      execFileSync(process.execPath, [CLI, 'install-zcode', '--local', ROOT], {
+        cwd: target,
+        stdio: 'pipe',
+      });
+
+      const content = readFileSync(join(target, '.zcode', 'skills', 'workflow-start', 'SKILL.md'), 'utf8');
+      const command = content.match(/node '[^']+' runtime asset read docs\/state-machine\.md/);
+      assert.ok(command, 'workflow-start should contain a shell-literal local runtime command');
+
+      const output = execFileSync('sh', ['-c', command[0]], { cwd: target, encoding: 'utf8' });
+      assert.match(output, /State Machine/);
     } finally {
       rmSync(target, { recursive: true, force: true });
     }
@@ -120,6 +139,9 @@ describe('runtime version synchronization', () => {
     });
 
     assert.match(output, /skills\/code-reviewer\/SKILL\.md: version string updated/);
+    assert.match(output, /skills\/build-executor\/implementer-prompt\.md: version string updated/);
+    assert.match(output, /skills\/build-executor\/task-reviewer-prompt\.md: version string updated/);
+    assert.match(output, /skills\/code-reviewer\/code-reviewer-prompt\.md: version string updated/);
   });
 });
 
