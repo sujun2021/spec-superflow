@@ -83,6 +83,26 @@ for (const check of TEXT_CHECKS) {
   }
 }
 
+const RUNTIME_SKILLS = [
+  'workflow-start', 'need-explorer', 'spec-writer', 'contract-builder',
+  'build-executor', 'bug-investigator', 'release-archivist', 'spec-merger',
+];
+for (const skill of RUNTIME_SKILLS) {
+  const file = `skills/${skill}/SKILL.md`;
+  const fp = join(ROOT, file);
+  if (!existsSync(fp)) {
+    errors.push({ file, found: 'FILE_NOT_FOUND', expected: CANONICAL });
+    continue;
+  }
+  const versions = [...readFileSync(fp, 'utf8').matchAll(/npx --yes --package spec-superflow@(\d+\.\d+\.\d+) ssf/g)]
+    .map(match => match[1]);
+  if (versions.length === 0) {
+    errors.push({ file, found: 'RUNTIME_PREFIX_NOT_FOUND', expected: CANONICAL });
+  } else if (versions.some(version => version !== CANONICAL)) {
+    errors.push({ file, found: [...new Set(versions)].join(', '), expected: CANONICAL });
+  }
+}
+
 // ── Report ──
 if (errors.length === 0) {
   console.log(`✅ Version consistency check passed — all files at ${CANONICAL}`);
