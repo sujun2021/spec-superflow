@@ -121,7 +121,9 @@ eight core states.
                 |              +------------------------------------+
                 |              (contract drift → re-bridge)
                 +---------------------------------------------------+
-                     (scope change → re-specify)
+                     (scope change in a non-terminal state → re-specify)
+
+  closing ─── scope change ───> create new change
 
   (any non-terminal state) ──> abandoned
                                 (terminal, no further transitions)

@@ -202,16 +202,20 @@ describe('Terminal state protection — abandoned', () => {
   }
 });
 
-// Scenario: 从 closing 不能进入 abandoned
+// Scenario: closing 后拒绝所有 transition
 describe('Terminal state protection — closing', () => {
   let dir;
   before(() => { dir = makeChangeDir(); });
   after(() => { cleanup(dir); });
 
-  it('SHALL reject closing → abandoned', () => {
-    const result = runGuard('closing', 'abandoned', dir);
-    assert.equal(result.ok, false, 'Closing → abandoned must be rejected (both terminal)');
-  });
+  const allTargets = ['exploring', 'specifying', 'bridging', 'approved-for-build', 'executing', 'debugging', 'abandoned'];
+
+  for (const target of allTargets) {
+    it(`SHALL reject closing → ${target}`, () => {
+      const result = runGuard('closing', target, dir);
+      assert.equal(result.ok, false, `Closing → ${target} must be rejected (closing is terminal)`);
+    });
+  }
 });
 
 // ─── D1: Fast-path validation ───

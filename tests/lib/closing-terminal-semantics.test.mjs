@@ -21,10 +21,19 @@ describe('closing terminal lifecycle', () => {
   it('short-circuits closing before recovery overlays and returns no next skill', () => {
     const workflow = read('skills/workflow-start/SKILL.md');
     const terminal = section(workflow, '## Terminal-State Short Circuit');
+    const updateCheck = workflow.indexOf('1. **Update check**');
     const recovery = workflow.indexOf('## Overlay Recovery Scan');
+    const executionControl = workflow.indexOf('## Execution-Control Recovery Scan');
 
-    assert.ok(workflow.indexOf('## Terminal-State Short Circuit') < recovery,
-      'terminal short circuit must run before overlay recovery scans');
+    for (const [marker, index] of [
+      ['update check', updateCheck],
+      ['overlay recovery', recovery],
+      ['execution-control recovery', executionControl],
+    ]) {
+      assert.notEqual(index, -1, `workflow must include ${marker}`);
+      assert.ok(workflow.indexOf('## Terminal-State Short Circuit') < index,
+        `terminal short circuit must run before ${marker}`);
+    }
     assert.match(terminal, /closing.*terminal/i);
     assert.match(terminal, /next skill.*none/i);
     assert.match(terminal,
@@ -78,12 +87,61 @@ describe('closing terminal lifecycle', () => {
     }
   });
 
+  it('places the release guard before every closing side effect and makes transition last', () => {
+    const archivist = read('skills/release-archivist/SKILL.md');
+    const guard = archivist.indexOf('## Execution-State Guard');
+    const audit = archivist.indexOf('npx --yes --package spec-superflow@0.10.0 ssf audit <change-dir>');
+    const dp6 = archivist.indexOf('### DP-6 (Verification Outcome)');
+    const dp7 = archivist.indexOf('### DP-7 (Archive Confirmation)');
+    const merger = archivist.indexOf('invoke `spec-merger`');
+    const transition = archivist.indexOf('npx --yes --package spec-superflow@0.10.0 ssf state transition <change-dir> closing');
+
+    for (const [marker, index] of [
+      ['release guard', guard],
+      ['audit command', audit],
+      ['DP-6', dp6],
+      ['DP-7', dp7],
+      ['spec-merger', merger],
+      ['final transition', transition],
+    ]) {
+      assert.notEqual(index, -1, `release-archivist must include ${marker}`);
+    }
+
+    for (const [marker, index] of [
+      ['audit command', audit],
+      ['DP-6', dp6],
+      ['DP-7', dp7],
+      ['spec-merger', merger],
+      ['final transition', transition],
+    ]) {
+      assert.ok(guard < index, `release guard must run before ${marker}`);
+      assert.ok(index <= transition, `${marker} must occur no later than the final transition`);
+    }
+    assert.equal(
+      (archivist.match(/npx --yes --package spec-superflow@0\.10\.0 ssf state transition <change-dir> closing/g) || []).length,
+      1,
+      'the actual final transition command must occur exactly once'
+    );
+  });
+
   it('defines closing as a successful terminal state with no active archivist', () => {
     const stateMachine = read('docs/state-machine.md');
     const closing = section(stateMachine, '### `closing`');
 
     assert.match(closing, /successful terminal/i);
     assert.doesNotMatch(closing, /release-archivist.*active/i);
+  });
+
+  it('draws scope-change rewind only from non-terminal states and starts a new change after closing', () => {
+    const stateMachine = read('docs/state-machine.md');
+    const transitions = section(stateMachine, '## Transitions');
+
+    assert.doesNotMatch(transitions, /closing\s*(?:→|->|─+>)\s*specifying/i,
+      'formal diagram must not draw a closing → specifying arrow');
+    assert.match(transitions, /scope change.*non-terminal.*re-specify/is,
+      'formal diagram must limit scope-change rewind to non-terminal states');
+    assert.match(transitions, /closing.*scope change.*new change/is,
+      'formal diagram must direct post-closing scope changes to a new change');
   });
 
   it('documents pre-closing work before the terminal closing state', () => {
