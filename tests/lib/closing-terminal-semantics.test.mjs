@@ -107,16 +107,11 @@ describe('closing terminal lifecycle', () => {
       assert.notEqual(index, -1, `release-archivist must include ${marker}`);
     }
 
-    for (const [marker, index] of [
-      ['audit command', audit],
-      ['DP-6', dp6],
-      ['DP-7', dp7],
-      ['spec-merger', merger],
-      ['final transition', transition],
-    ]) {
-      assert.ok(guard < index, `release guard must run before ${marker}`);
-      assert.ok(index <= transition, `${marker} must occur no later than the final transition`);
-    }
+    assert.ok(guard < audit, 'release guard must run before the actual audit command');
+    assert.ok(audit < dp6, 'actual audit command must run before DP-6');
+    assert.ok(dp6 < dp7, 'DP-6 must be recorded before DP-7');
+    assert.ok(dp7 < merger, 'DP-7 must be recorded before invoking spec-merger');
+    assert.ok(merger < transition, 'spec-merger must run before the actual final transition');
     assert.equal(
       (archivist.match(/npx --yes --package spec-superflow@0\.10\.0 ssf state transition <change-dir> closing/g) || []).length,
       1,
