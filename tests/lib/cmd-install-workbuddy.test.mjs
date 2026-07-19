@@ -22,8 +22,8 @@ describe('cmd-install-workbuddy', () => {
     if (tempDir) rmSync(tempDir, { recursive: true, force: true });
   });
 
-  function makePluginRoot({ commands = ['resume', 'save', 'switch'] } = {}) {
-    const pluginRoot = join(tempDir, 'spec-superflow');
+  function makePluginRoot({ commands = ['resume', 'save', 'switch'], name = 'spec-superflow' } = {}) {
+    const pluginRoot = join(tempDir, name);
     const skillsDir = join(pluginRoot, 'skills');
     mkdirSync(join(skillsDir, 'workflow-start'), { recursive: true });
     mkdirSync(join(skillsDir, 'need-explorer'), { recursive: true });
@@ -120,7 +120,7 @@ describe('cmd-install-workbuddy', () => {
     );
     assert.throws(
       () => planInstall({ pluginRoot: makePluginRoot({ commands: ['resume', 'save'] }), homeDir }),
-      /canonical recovery command set/,
+      /canonical command tree/,
     );
     assert.equal(existsSync(homeDir), false);
   });
@@ -140,6 +140,48 @@ describe('cmd-install-workbuddy', () => {
       /symbolic links are not allowed in command source/,
     );
     assert.equal(existsSync(homeDir), false);
+  });
+
+  it('rejects extra regular files inside the canonical command directory before writing WorkBuddy home', async () => {
+    const pluginRoot = makePluginRoot();
+    const homeDir = join(tempDir, 'extra-command-file-home');
+    writeFileSync(join(pluginRoot, 'commands', 'ssf', 'notes.txt'), 'not a command\n');
+
+    assert.throws(
+      () => planInstall({ pluginRoot, homeDir }),
+      /canonical command tree/,
+    );
+    await assert.rejects(
+      installWorkBuddy({ pluginRoot, homeDir, marketplaceName: 'test' }),
+      /canonical command tree/,
+    );
+    assert.equal(existsSync(homeDir), false);
+  });
+
+  it('rejects unexpected files and directories at the commands root before writing WorkBuddy home', async () => {
+    const cases = [
+      {
+        name: 'root-file',
+        mutate: pluginRoot => writeFileSync(join(pluginRoot, 'commands', 'notes.txt'), 'not a command\n'),
+      },
+      {
+        name: 'root-directory',
+        mutate: pluginRoot => mkdirSync(join(pluginRoot, 'commands', 'other'), { recursive: true }),
+      },
+    ];
+
+    for (const { name, mutate } of cases) {
+      const pluginRoot = makePluginRoot({ name: `spec-superflow-${name}` });
+      const homeDir = join(tempDir, `${name}-home`);
+      mutate(pluginRoot);
+
+      assert.throws(() => planInstall({ pluginRoot, homeDir }), /canonical command tree/);
+      await assert.rejects(
+        installWorkBuddy({ pluginRoot, homeDir, marketplaceName: 'test' }),
+        /canonical command tree/,
+      );
+      assert.equal(existsSync(homeDir), false);
+    }
   });
 
   it('dry-run reports commands and does not write the requested home directory', () => {
