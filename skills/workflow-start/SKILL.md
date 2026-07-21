@@ -40,9 +40,11 @@ scan, or `release-archivist`; do not resume, hand off, or route any more work.
 
 ## DP-0: User Confirmation Gate
 
-Run DP-0 when: change folder doesn't exist, planning artifacts missing/empty, or `dp_0_confirmed` ≠ `true`. Skip if `dp_0_confirmed` is `true`.
-
-Ask: change name + one-sentence intent, known constraints, related optimizations (include or stay focused?), communication preference (ask per decision or draft for review).
+Run DP-0 when: change folder doesn't exist, planning artifacts are
+missing/empty, `dp_0_confirmed` is not `true`, or a legacy change still has an
+`auto`/empty workflow. Resolve the artifact language first, then complete the
+workflow path intake. Do not set `dp_0_confirmed=true` while path facts or the
+user's path choice are still missing.
 
 ### Artifact Language Resolution
 
@@ -63,30 +65,19 @@ but this field is absent, resolve and append it before routing to `spec-writer`.
 All later planning skills reuse this field so one change does not switch
 languages without an explicit user request.
 
-After confirmation:
-```bash
-npx --yes --package spec-superflow@0.10.0 ssf state set <change-dir> dp_0_decisions "<summary>"
-npx --yes --package spec-superflow@0.10.0 ssf state set <change-dir> dp_0_result confirmed
-npx --yes --package spec-superflow@0.10.0 ssf state set <change-dir> dp_0_confirmed true
-npx --yes --package spec-superflow@0.10.0 ssf state set <change-dir> dp_0_timestamp $(date -u +%Y-%m-%dT%H:%M:%SZ)
-```
-
-Config-aware routing: check `artifacts.order`, `artifacts.skip`, and
-`execution.defaultLanguage` from project config.
-
-## Mode Detection
+### Workflow Path Intake (Mode Detection)
 
 Workflow path selection is a DP-0 intake decision. It selects the planning path
 (`full`, `hotfix`, or `tweak`); it is separate from DP-4, which later selects
 the execution mode (`Inline`, `Batch Inline`, or `SDD`). It does not add a
 state or cause a phase transition.
 
-1. Read `state.workflow`. An explicit `full`/`hotfix`/`tweak` selection wins;
-   report it and skip recommendation.
+1. Read `state.workflow`. An explicit workflow `full`/`hotfix`/`tweak` wins;
+   report it and skip the automatic recommendation flow.
 2. For `auto`/`null`/unset, run `npx --yes --package spec-superflow@0.10.0 ssf workflow show <change-dir> --json` before collecting or changing any facts.
-3. If the response is `needs-input`, ask only for the fields listed in
-   `missing_facts`. Do not invent facts from missing artifacts and do not default
-   the path to `full`.
+3. If the response is `needs-input`, ask only for `missing_facts`; do not ask
+   for any fact not listed by the receipt. Do not invent facts from missing
+   artifacts and do not default the path to `full`.
 4. Run `npx --yes --package spec-superflow@0.10.0 ssf workflow recommend <change-dir> ...` once with one complete fact snapshot.
 5. Show the user `Observed`, `Available`, `Recommended`, and `Why`. A
    recommendation is advice only: never persist it as the workflow selection.
@@ -94,11 +85,31 @@ state or cause a phase transition.
    `npx --yes --package spec-superflow@0.10.0 ssf workflow select <change-dir> --mode <full|hotfix|tweak> --confirm --reason "<user choice>"`.
 7. Add `--acknowledge-recommendation` only after the user chooses a
    non-recommended path. Report the persisted receipt and DP-0 audit summary.
-8. Keep `npx --yes --package spec-superflow@0.10.0 ssf runtime infer <change-dir>` only for legacy artifact inference and validation compatibility; it cannot replace user selection at intake.
+8. If `show` reports `selection-pending`, explain that its signed receipt was
+   written before the state update and safely repeat the same explicit `select`
+   command. Do not overwrite an explicit mode unless the user asks.
+9. Keep `npx --yes --package spec-superflow@0.10.0 ssf runtime infer <change-dir>` only for legacy artifact inference and validation compatibility; it cannot replace user selection at intake.
 
-If `show` reports `selection-pending`, explain that its signed receipt was
-written before the state update and safely repeat the same explicit `select`
-command. Do not overwrite an explicit mode unless the user asks.
+### Confirm DP-0
+
+Only after an explicit workflow path is available, ask for the remaining DP-0
+decisions: change name and one-sentence intent, known constraints, related
+optimizations (include or stay focused?), and communication preference (ask per
+decision or draft for review). Confirm one combined summary containing those
+decisions, the resolved `artifact_language`, and the persisted workflow path
+plus recommendation-alignment summary. Preserve existing scope, constraints,
+and language entries; never replace them with the path summary alone.
+
+After that combined confirmation:
+```bash
+npx --yes --package spec-superflow@0.10.0 ssf state set <change-dir> dp_0_decisions "<combined summary preserving scope, artifact_language, and workflow_path>"
+npx --yes --package spec-superflow@0.10.0 ssf state set <change-dir> dp_0_result confirmed
+npx --yes --package spec-superflow@0.10.0 ssf state set <change-dir> dp_0_confirmed true
+npx --yes --package spec-superflow@0.10.0 ssf state set <change-dir> dp_0_timestamp $(date -u +%Y-%m-%dT%H:%M:%SZ)
+```
+
+Config-aware routing: check `artifacts.order`, `artifacts.skip`, and
+`execution.defaultLanguage` from project config.
 
 ## Routing Rules
 

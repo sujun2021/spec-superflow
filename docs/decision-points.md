@@ -9,7 +9,8 @@
 - **触发条件**：`workflow-start` 检测到规划工件不存在或不完整，准备路由到 `spec-writer` 之前
 - **所需输入**：变更名称与意图、已知约束（命名风格、兼容性、受影响平台）、是否包含相关优化、用户沟通偏好；以及最少路径事实（任务数、文件数、是否仅配置/文档、是否涉及 schema/API、新模块和不确定性）
 - **路径选择协议**：`workflow-start` 先读取 `ssf workflow show`；仅在 `missing_facts` 列出的字段缺失时提问，再运行 `ssf workflow recommend`。它必须向用户展示 Observed、Available、Recommended、Why 四项信息，推荐本身不改变状态也不写入 workflow。用户明确选择 `full`、`hotfix` 或 `tweak` 后，才可用 `ssf workflow select --confirm` 持久化；选择非推荐路径还必须显式传入 `--acknowledge-recommendation`。
-- **预期输出**：用户确认关键决策，或提出修改意见；`workflow-start` 将确认结果、路径选择 receipt 及 `workflow_path`/推荐对齐摘要写入 `.spec-superflow.yaml` 的 `dp_0_*` 字段，便于恢复和审计。空目录的 legacy artifact inference 可以返回 `full` 以兼容旧 API，但绝不能替代入口的用户选择。
+- **确认顺序**：可先解析 `artifact_language`，随后必须完成路径 receipt 读取、最少事实补全、建议展示和用户选择；路径摘要与其他 DP-0 决定合并确认后，才可设置 `dp_0_confirmed=true`。
+- **预期输出**：完整、防篡改的路径选择 receipt 固定保存在 change overlay 的 `.superpowers/sdd/workflow-selection.json`，用于恢复和审计；`.spec-superflow.yaml` 的 `dp_0_*` 只保存确认结果与幂等的 `workflow_path`/推荐对齐摘要，并保留既有 `scope` 和 `artifact_language`。空目录的 legacy artifact inference 可以返回 `full` 以兼容旧 API，但绝不能替代入口的用户选择。
 - **关联 skill**：`spec-superflow:workflow-start`
 
 ## DP-1: 需求确认

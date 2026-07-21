@@ -23,6 +23,13 @@ not change state or select a path: only an explicit `ssf workflow select
 may return `full` for an empty directory, but it never replaces the user's
 intake selection.
 
+This intake completes before DP-0 is marked confirmed. Artifact language may
+be resolved first, but `dp_0_confirmed=true` is written only after the selected
+path summary and the remaining scope, constraints, and communication decisions
+are confirmed together. The full selection receipt lives at
+`.superpowers/sdd/workflow-selection.json`; DP-0 state stores only the
+idempotent summary while preserving scope and `artifact_language`.
+
 This is the DP-0 planning-path decision. DP-4 remains the separate execution
 mode decision among Inline, Batch Inline, and SDD. Neither recommendation nor
 selection creates a ninth state or performs a phase transition.
