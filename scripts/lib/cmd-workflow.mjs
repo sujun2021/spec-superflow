@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 import {
   WORKFLOW_MODES,
+  recommendWorkflowPath,
   readWorkflowSelection,
   recordWorkflowSelection,
   saveWorkflowRecommendation,
@@ -97,13 +98,22 @@ function show(changeDir, state, json) {
     if (isExplicitWorkflow(state.workflow)) {
       return print({ source: 'explicit-state', workflow: state.workflow }, json);
     }
-    return print({ status: 'missing', workflow: state.workflow ?? 'auto', receipt }, json);
+    return print({
+      source: 'missing-receipt',
+      ...recommendWorkflowPath({}),
+      workflow: state.workflow ?? 'auto',
+      receipt,
+    }, json);
   }
   if (!receipt.valid) {
     if (isExplicitWorkflow(state.workflow)) {
-      return print({ source: 'explicit-state', workflow: state.workflow, receipt }, json);
+      return print({
+        source: 'explicit-state', workflow: state.workflow, record: receipt.record, receipt,
+      }, json);
     }
-    print({ status: 'invalid', workflow: state.workflow ?? 'auto', receipt }, json);
+    print({
+      status: 'invalid', workflow: state.workflow ?? 'auto', record: receipt.record, receipt,
+    }, json);
     process.exitCode = 1;
     return;
   }
@@ -173,25 +183,52 @@ function print(value, json) {
 }
 
 function format(value) {
-  if (value.status === 'needs-input') {
-    return `More workflow facts are required: ${value.missing_facts.join(', ')}`;
+  const record = value.record ?? value;
+  if (value.source === 'explicit-state') {
+    return [
+      `Workflow is explicitly set to ${value.workflow}.`,
+      ...formatRecordDetails(value, record),
+    ].join('\n');
   }
-  if (value.status === 'ready') {
-    const record = value.record ?? value;
+  if (value.source === 'user-confirmed') return `Workflow selected: ${value.record.selection.mode}.`;
+  if (value.status) {
+    return [
+      `Workflow status: ${value.status}.`,
+      ...formatRecordDetails(value, record),
+    ].join('\n');
+  }
+  return JSON.stringify(value);
+}
+
+function formatRecordDetails(value, record) {
+  const lines = [];
+  if (record?.facts) {
     const observed = Object.entries(record.facts)
       .map(([name, fact]) => `${name}=${fact}`)
       .join(', ');
-    return [
-      `Observed: ${observed}`,
-      `Available: ${record.available_modes.join(', ')}`,
-      `Recommended: ${record.recommendation.mode}`,
-      `Why: ${record.recommendation.reasons.join(' ')}`,
-    ].join('\n');
+    lines.push(`Observed: ${observed}`);
   }
-  if (value.status) return `Workflow status: ${value.status}.`;
-  if (value.source === 'explicit-state') return `Workflow is explicitly set to ${value.workflow}.`;
-  if (value.source === 'user-confirmed') return `Workflow selected: ${value.record.selection.mode}.`;
-  return JSON.stringify(value);
+  if (record?.available_modes) lines.push(`Available: ${record.available_modes.join(', ')}`);
+  if (record?.recommendation) {
+    lines.push(`Recommended: ${record.recommendation.mode}`);
+    lines.push(`Why: ${record.recommendation.reasons.join(' ')}`);
+  }
+  if (record?.missing_facts?.length) {
+    lines.push(`Missing facts: ${record.missing_facts.join(', ')}`);
+  }
+  if (record?.selection) {
+    lines.push(`Selection: mode=${record.selection.mode}, reason=${record.selection.reason}, followed_recommendation=${record.selection.followed_recommendation}`);
+  }
+
+  if (value.receipt?.exists === false) lines.push('Hash valid: unavailable (receipt missing)');
+  else if (value.status === 'invalid' || value.receipt?.valid === false) lines.push('Hash valid: false');
+  else if (record?.hash) lines.push('Hash valid: true');
+  else if (value.source === 'explicit-state') lines.push('Hash valid: not applicable (explicit state)');
+
+  if (value.receipt?.failures?.length) {
+    lines.push(`Receipt failures: ${value.receipt.failures.join('; ')}`);
+  }
+  return lines;
 }
 
 function fail(message, exitCode) {

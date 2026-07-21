@@ -72,23 +72,28 @@ Workflow path selection is a DP-0 intake decision. It selects the planning path
 the execution mode (`Inline`, `Batch Inline`, or `SDD`). It does not add a
 state or cause a phase transition.
 
-1. Read `state.workflow`. An explicit workflow `full`/`hotfix`/`tweak` wins;
+1. Obtain the change name and one-sentence intent before any state-dependent
+   command. Validate the change name as one non-empty relative path segment
+   (not `.` or `..`, with no `/` or `\\`), resolve the change dir as `<project-root>/changes/<change-name>`, and reject any normalized path that
+   escapes the project's `changes/` directory.
+2. If the state file is absent or `dp_0_confirmed` is `false`/null, run `npx --yes --package spec-superflow@0.11.0 ssf state init <change-dir>` before `show`; initialization must leave DP-0 unconfirmed.
+3. Read `state.workflow`. An explicit workflow `full`/`hotfix`/`tweak` wins;
    report it and skip the automatic recommendation flow.
-2. For `auto`/`null`/unset, run `npx --yes --package spec-superflow@0.11.0 ssf workflow show <change-dir> --json` before collecting or changing any facts.
-3. If the response is `needs-input`, ask only for `missing_facts`; do not ask
+4. For `auto`/`null`/unset, run `npx --yes --package spec-superflow@0.11.0 ssf workflow show <change-dir> --json` before collecting or changing any facts. A missing receipt is represented as `needs-input` with all six fixed facts in `missing_facts`.
+5. If the response is `needs-input`, ask only for `missing_facts`; do not ask
    for any fact not listed by the receipt. Do not invent facts from missing
    artifacts and do not default the path to `full`.
-4. Run `npx --yes --package spec-superflow@0.11.0 ssf workflow recommend <change-dir> ...` once with one complete fact snapshot.
-5. Show the user `Observed`, `Available`, `Recommended`, and `Why`. A
+6. Run `npx --yes --package spec-superflow@0.11.0 ssf workflow recommend <change-dir> ...` once with one complete fact snapshot.
+7. Show the user `Observed`, `Available`, `Recommended`, and `Why`. A
    recommendation is advice only: never persist it as the workflow selection.
-6. Obtain the user's explicit path choice, then run
+8. Obtain the user's explicit path choice, then run
    `npx --yes --package spec-superflow@0.11.0 ssf workflow select <change-dir> --mode <full|hotfix|tweak> --confirm --reason "<user choice>"`.
-7. Add `--acknowledge-recommendation` only after the user chooses a
+9. Add `--acknowledge-recommendation` only after the user chooses a
    non-recommended path. Report the persisted receipt and DP-0 audit summary.
-8. If `show` reports `selection-pending`, explain that its signed receipt was
+10. If `show` reports `selection-pending`, explain that its signed receipt was
    written before the state update and safely repeat the same explicit `select`
    command. Do not overwrite an explicit mode unless the user asks.
-9. Keep `npx --yes --package spec-superflow@0.11.0 ssf runtime infer <change-dir>` only for legacy artifact inference and validation compatibility; it cannot replace user selection at intake.
+11. Keep `npx --yes --package spec-superflow@0.11.0 ssf runtime infer <change-dir>` only for legacy artifact inference and validation compatibility; it cannot replace user selection at intake.
 
 ### Confirm DP-0
 

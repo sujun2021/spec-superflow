@@ -105,6 +105,7 @@ describe('ssf workflow', () => {
     assert.match(shown.stdout, /Available:.*full.*hotfix.*tweak/);
     assert.match(shown.stdout, /Recommended: hotfix/);
     assert.match(shown.stdout, /Why:.*bounded code work/i);
+    assert.match(shown.stdout, /Hash valid: true/i);
   });
 
   it('returns needs-input without changing auto workflow', () => {
@@ -115,6 +116,29 @@ describe('ssf workflow', () => {
     assert.equal(result.json.status, 'needs-input');
     assert.deepEqual(result.json.missing_facts, ['file_count', 'schema_api_change']);
     assert.equal(readState(changeDir).workflow, 'auto');
+  });
+
+  it('restores needs-input context in human and JSON show output', () => {
+    const recommended = runSsf(['workflow', 'recommend', changeDir,
+      '--task-count', '2', '--config-doc-only', 'no', '--schema-api-change', 'unknown',
+      '--new-module', 'no', '--uncertainty', 'low', '--json']);
+    assert.equal(recommended.exitCode, 0, recommended.stderr);
+
+    const human = runSsf(['workflow', 'show', changeDir]);
+    assert.equal(human.exitCode, 0, human.stderr);
+    assert.match(human.stdout, /Workflow status: needs-input/i);
+    assert.match(human.stdout, /Observed:.*task_count=2.*file_count=null/i);
+    assert.match(human.stdout, /Available:.*full.*hotfix.*tweak/i);
+    assert.match(human.stdout, /Missing facts: file_count, schema_api_change/i);
+    assert.match(human.stdout, /Hash valid: true/i);
+
+    const json = runSsf(['workflow', 'show', changeDir, '--json']);
+    assert.equal(json.exitCode, 0, json.stderr);
+    assert.equal(json.json.status, 'needs-input');
+    assert.equal(json.json.workflow, 'auto');
+    assert.deepEqual(json.json.record.missing_facts, ['file_count', 'schema_api_change']);
+    assert.equal(json.json.record.facts.task_count, 2);
+    assert.equal(json.json.record.recommendation, null);
   });
 
   it('respects an explicitly configured workflow without creating a receipt', () => {
@@ -143,6 +167,12 @@ describe('ssf workflow', () => {
     assert.equal(result.exitCode, 0, result.stderr);
     assert.equal(result.json.source, 'explicit-state');
     assert.equal(result.json.workflow, 'full');
+
+    const human = runSsf(['workflow', 'show', changeDir]);
+    assert.equal(human.exitCode, 0, human.stderr);
+    assert.match(human.stdout, /explicitly set to full/i);
+    assert.match(human.stdout, /Hash valid: false/i);
+    assert.match(human.stdout, /hash mismatch/i);
   });
 
   it('rejects selection from a tampered receipt without mutating receipt or state', () => {
@@ -176,11 +206,27 @@ describe('ssf workflow', () => {
     assert.equal(readState(changeDir).workflow, 'full');
   });
 
-  it('shows missing, invalid, selection-pending, and selected receipt states', () => {
+  it('treats a missing receipt as needs-input with all fixed facts missing', () => {
     let result = runSsf(['workflow', 'show', changeDir, '--json']);
     assert.equal(result.exitCode, 0, result.stderr);
-    assert.equal(result.json.status, 'missing');
+    assert.equal(result.json.status, 'needs-input');
+    assert.equal(result.json.source, 'missing-receipt');
+    assert.deepEqual(result.json.missing_facts, [
+      'task_count', 'file_count', 'config_doc_only', 'schema_api_change',
+      'new_module', 'uncertainty',
+    ]);
+    assert.deepEqual(result.json.available_modes, ['full', 'hotfix', 'tweak']);
+    assert.equal(result.json.recommendation, null);
+    assert.equal(result.json.receipt.exists, false);
 
+    result = runSsf(['workflow', 'show', changeDir]);
+    assert.equal(result.exitCode, 0, result.stderr);
+    assert.match(result.stdout, /Workflow status: needs-input/i);
+    assert.match(result.stdout, /Missing facts: task_count, file_count, config_doc_only, schema_api_change, new_module, uncertainty/i);
+    assert.match(result.stdout, /Hash valid: unavailable/i);
+  });
+
+  it('restores invalid receipt evidence in human and JSON show output', () => {
     saveWorkflowRecommendation(changeDir, {
       task_count: 2, file_count: 2, config_doc_only: 'no', schema_api_change: 'no',
       new_module: 'no', uncertainty: 'low',
@@ -189,10 +235,26 @@ describe('ssf workflow', () => {
     const tampered = JSON.parse(readFileSync(receiptPath, 'utf8'));
     tampered.facts.file_count = 99;
     writeFileSync(receiptPath, JSON.stringify(tampered));
-    result = runSsf(['workflow', 'show', changeDir, '--json']);
-    assert.equal(result.exitCode, 1);
-    assert.equal(result.json.status, 'invalid');
 
+    const human = runSsf(['workflow', 'show', changeDir]);
+    assert.equal(human.exitCode, 1);
+    assert.match(human.stdout, /Workflow status: invalid/i);
+    assert.match(human.stdout, /Observed:.*file_count=99/i);
+    assert.match(human.stdout, /Available:.*full.*hotfix.*tweak/i);
+    assert.match(human.stdout, /Recommended: hotfix/i);
+    assert.match(human.stdout, /Why:/i);
+    assert.match(human.stdout, /Hash valid: false/i);
+    assert.match(human.stdout, /hash mismatch/i);
+
+    const json = runSsf(['workflow', 'show', changeDir, '--json']);
+    assert.equal(json.exitCode, 1);
+    assert.equal(json.json.status, 'invalid');
+    assert.equal(json.json.receipt.valid, false);
+    assert.equal(json.json.receipt.record.facts.file_count, 99);
+    assert.match(json.json.receipt.failures.join(' '), /hash mismatch/i);
+  });
+
+  it('restores selection-pending evidence in human and JSON show output', () => {
     saveWorkflowRecommendation(changeDir, {
       task_count: 2, file_count: 2, config_doc_only: 'no', schema_api_change: 'no',
       new_module: 'no', uncertainty: 'low',
@@ -200,16 +262,68 @@ describe('ssf workflow', () => {
     recordWorkflowSelection(changeDir, {
       mode: 'hotfix', reason: 'recoverable selection', confirmed: true, acknowledged: false,
     });
-    result = runSsf(['workflow', 'show', changeDir, '--json']);
-    assert.equal(result.exitCode, 0, result.stderr);
-    assert.equal(result.json.status, 'selection-pending');
 
-    result = runSsf(['workflow', 'select', changeDir, '--mode', 'hotfix',
+    const human = runSsf(['workflow', 'show', changeDir]);
+    assert.equal(human.exitCode, 0, human.stderr);
+    assert.match(human.stdout, /Workflow status: selection-pending/i);
+    assert.match(human.stdout, /Observed:/i);
+    assert.match(human.stdout, /Available:.*full.*hotfix.*tweak/i);
+    assert.match(human.stdout, /Recommended: hotfix/i);
+    assert.match(human.stdout, /Why:/i);
+    assert.match(human.stdout, /Selection:.*mode=hotfix.*reason=recoverable selection/i);
+    assert.match(human.stdout, /Hash valid: true/i);
+
+    const json = runSsf(['workflow', 'show', changeDir, '--json']);
+    assert.equal(json.exitCode, 0, json.stderr);
+    assert.equal(json.json.status, 'selection-pending');
+    assert.equal(json.json.workflow, 'auto');
+    assert.equal(json.json.record.selection.mode, 'hotfix');
+    assert.equal(json.json.record.selection.reason, 'recoverable selection');
+  });
+
+  it('restores selected evidence in human and JSON show output', () => {
+    assert.equal(recommend().exitCode, 0);
+
+    let result = runSsf(['workflow', 'select', changeDir, '--mode', 'hotfix',
       '--confirm', '--reason', 'recoverable selection', '--json']);
     assert.equal(result.exitCode, 0, result.stderr);
+
+    const human = runSsf(['workflow', 'show', changeDir]);
+    assert.equal(human.exitCode, 0, human.stderr);
+    assert.match(human.stdout, /Workflow status: selected/i);
+    assert.match(human.stdout, /Observed:/i);
+    assert.match(human.stdout, /Available:.*full.*hotfix.*tweak/i);
+    assert.match(human.stdout, /Recommended: hotfix/i);
+    assert.match(human.stdout, /Why:/i);
+    assert.match(human.stdout, /Selection:.*mode=hotfix.*reason=recoverable selection/i);
+    assert.match(human.stdout, /Hash valid: true/i);
+
     result = runSsf(['workflow', 'show', changeDir, '--json']);
     assert.equal(result.exitCode, 0, result.stderr);
     assert.equal(result.json.status, 'selected');
+    assert.equal(result.json.workflow, 'hotfix');
+    assert.equal(result.json.record.selection.mode, 'hotfix');
+    assert.equal(result.json.record.selection.followed_recommendation, true);
+  });
+
+  it('initializes a brand-new change before showing all missing workflow facts', () => {
+    rmSync(changeDir, { recursive: true, force: true });
+    assert.equal(existsSync(changeDir), false);
+
+    const initialized = runSsf(['state', 'init', changeDir, '--json']);
+    assert.equal(initialized.exitCode, 0, initialized.stderr);
+    const state = readState(changeDir);
+    assert.equal(state.workflow, 'auto');
+    assert.equal(state.dp_0_confirmed, null);
+
+    const shown = runSsf(['workflow', 'show', changeDir, '--json']);
+    assert.equal(shown.exitCode, 0, shown.stderr);
+    assert.equal(shown.json.status, 'needs-input');
+    assert.deepEqual(shown.json.missing_facts, [
+      'task_count', 'file_count', 'config_doc_only', 'schema_api_change',
+      'new_module', 'uncertainty',
+    ]);
+    assert.equal(readState(changeDir).dp_0_confirmed, null);
   });
 
   it('rejects a missing state file without creating a ghost state', () => {
